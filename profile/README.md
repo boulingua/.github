@@ -69,21 +69,31 @@ The landing page that ties everything together — about, philosophy, references
 
 | Repo | Stack | Purpose |
 |------|-------|---------|
-| [`website`](https://github.com/boulingua/website) | Hugo (Coder theme) | Umbrella landing page |
-| [`efl`](https://github.com/boulingua/efl) | Quarto | English curriculum, Klassen 5–13 |
-| [`fle`](https://github.com/boulingua/fle) | Quarto | French curriculum, Klassen 6–13 |
-| [`daf`](https://github.com/boulingua/daf) | Quarto | German curriculum, CEFR A1–C1 |
-| [`ressources`](https://github.com/boulingua/ressources) | Quarto | Curated open-license resources hub |
+| [`website`](https://github.com/boulingua/website) | Hugo (Coder theme) | Umbrella landing page + interactive language-reach map |
+| [`efl`](https://github.com/boulingua/efl) | Hugo | English curriculum, Klassen 5–13 |
+| [`fle`](https://github.com/boulingua/fle) | Hugo | French curriculum, Klassen 6–13 |
+| [`daf`](https://github.com/boulingua/daf) | Hugo | German curriculum, CEFR A1–C1 |
+| [`ressources`](https://github.com/boulingua/ressources) | Hugo | Curated open-license resources hub |
+| [`slidegen`](https://github.com/boulingua/slidegen) | LaTeX (Beamer/XeLaTeX) | Branded slide-deck template |
+| [`sheetgen`](https://github.com/boulingua/sheetgen) | LaTeX | Branded worksheet template |
+| [`audiogen`](https://github.com/boulingua/audiogen) | Python | Native-voice audio pipeline (OGG) |
 
-All five repositories are deployed via **GitHub Pages**.
+The four content sites are deployed via **GitHub Pages**; the toolchain repos
+generate the branded print and audio materials the courses ship with.
+
+Additional single-letter repos (`afl`, `cfl`, `gfl`, …) are **scaffolds for
+future languages** — the platform is architected to extend beyond its first
+three languages, as shown on the [interactive world map](https://boulingua.github.io/website/platforms/).
 
 ---
 
 ## Design philosophy
 
-All four sister sites share an **identical design system** — same navigation, same typography (Source Sans 3 + JetBrains Mono), same visual rhythm in light and dark mode. A teacher or student moving between languages encounters the same interface every time. Consistency is a feature, not an accident.
+All sister sites share an **identical design system** — same navigation, same typography (Source Sans 3 + JetBrains Mono), same visual rhythm in light and dark mode. A teacher or student moving between languages encounters the same interface every time. Consistency is a feature, not an accident.
 
-Every teaching unit is offered in **dual format**: an HTML page for browser study and a printable slide deck for classroom use. PDFs carry attribution watermarks; CI gates block deployment for missing copyright metadata, unfilled Impressum placeholders, or commercial sources in the Ressourcen-Hub.
+Within that shared frame, **each language carries its own signature accent colour** — chosen to be distinct, accessible, and, by rule, *not* a colour found in the language's national flag — together with a matching pentagon icon. The colour is applied consistently across the site, the READMEs, and the printed materials, so each language stays recognisable at a glance. The full palette and the reasoning behind it are documented on the [design & colours page](https://boulingua.github.io/website/design/).
+
+Every teaching unit ships in **multiple formats**: an HTML page for browser study, a printable slide deck and worksheet (both generated from the branded [`slidegen`](https://github.com/boulingua/slidegen)/[`sheetgen`](https://github.com/boulingua/sheetgen) LaTeX templates), and native-voice audio. PDFs carry attribution watermarks; CI gates block deployment for missing copyright metadata, unfilled Impressum placeholders, or commercial sources in the Ressourcen-Hub.
 
 ---
 
