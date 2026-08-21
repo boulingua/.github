@@ -1,0 +1,143 @@
+name: New language
+description: Propose a nineteenth course, or open Stage 0 for an existing scaffold
+title: "[new-language] "
+labels: ["new-language", "org"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A repository is not created until Stage 0 passes. Two questions block that stage, and both
+        are answered on this form rather than discovered mid-wave: **can the script be typeset and
+        rendered**, and **who is the named native checker**. A course with no named checker does not
+        advance past G3, and a voice ID that has not been auditioned may not be written into any
+        README, `voices.yml` row or download URL.
+
+        Fifteen scaffolds already exist — `afl cfl ele gfl ils jfl lle nsf nvt pfa pfl ple rki tfl ufl`.
+        Use this form for those too when their wave opens.
+  - type: input
+    id: code
+    attributes:
+      label: Repository code
+      description: Three-letter org code, e.g. ele, ufl, rki.
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: Language name and content language tag
+      placeholder: Español — content language es, chrome language de
+    validations:
+      required: true
+  - type: input
+    id: levels
+    attributes:
+      label: Levels intended
+      placeholder: A1, A2, B1
+    validations:
+      required: true
+  - type: input
+    id: script
+    attributes:
+      label: Script and writing system
+      description: Script name, direction (LTR or RTL), and whether it needs shaping or vertical text.
+      placeholder: Cyrillic, LTR, no shaping
+    validations:
+      required: true
+  - type: textarea
+    id: must_render
+    attributes:
+      label: Font coverage — must_render set
+      description: |
+        The codepoints this language needs beyond the base Latin set, and a sample sentence
+        containing every one of them. `build_fonts.py` refuses a row whose sample omits a
+        declared codepoint, so the two must agree.
+      value: |
+        codepoints: ["U+0491", "U+0456", "U+0457", "U+0454", "U+02BC"]
+        sample: "Ґанок із ґратами — з'їзд у Києві."
+        rationale: ""
+      render: yaml
+    validations:
+      required: true
+  - type: input
+    id: font_family
+    attributes:
+      label: Font family that covers the script
+      description: Which family in kit/design/fonts.yaml covers it, or which one has to be procured.
+      placeholder: Source Sans 3 (full upstream) — Cyrillic covered
+    validations:
+      required: true
+  - type: input
+    id: voice
+    attributes:
+      label: Piper voice key, verbatim
+      description: |
+        Copy the key exactly as upstream writes it, including non-ASCII characters — pt_PT-tugão-medium
+        resolves, pt_PT-tugao-medium is a 404. Write "none" if no voice exists.
+      placeholder: uk_UA-tetiana-medium
+    validations:
+      required: true
+  - type: dropdown
+    id: voice_status
+    attributes:
+      label: Voice availability
+      options:
+        - ready — model fetched and the licence is in the allow-list
+        - gated — model exists but the licence is unstated or NonCommercial
+        - none — no voice; the course ships transcript-only
+        - unverified — candidate copied from a ROADMAP, not yet resolved upstream
+    validations:
+      required: true
+  - type: input
+    id: voice_licence
+    attributes:
+      label: Voice model licence
+      description: |
+        A ready row must be in the allow-list {CC0, public-domain, Unlicense, CC BY 3.0, CC BY 4.0,
+        CC BY-SA 4.0, Apache-2.0, MIT}. Anything else is a hard failure of gate D6, because course
+        content is CC BY-SA 4.0 and cannot carry an added restriction.
+      placeholder: CC BY 4.0 — https://…/MODEL_CARD
+    validations:
+      required: true
+  - type: input
+    id: checker_name
+    attributes:
+      label: Named native checker
+      description: The person who will sign the G3 native check. A role, a team or "to be found" is not an answer.
+      placeholder: Full name
+    validations:
+      required: true
+  - type: input
+    id: checker_contact
+    attributes:
+      label: Native checker — affiliation and how they are reached
+      description: Enough that a unit awaiting a check can actually be sent to them.
+    validations:
+      required: true
+  - type: dropdown
+    id: checker_commit
+    attributes:
+      label: Has the named checker agreed?
+      options:
+        - Yes, agreed and available
+        - Approached, no answer yet
+        - Not yet approached
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why this language, and which wave
+      description: Learner demand in the Gesamtschule context, existing scaffold ROADMAP, and where it sits in the build-out order.
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - label: The accent will be taken from the lowest free slot on the hue ring by `bin/kit design accent`, not chosen aesthetically.
+          required: true
+        - label: No voice ID from this proposal will be written into a README, a voices.yml ready row or a download URL before `bin/kit audio audition` has committed a verdict.
+          required: true
+        - label: New courses adopt hyphen section paths, hyphen leaf slugs and the unit ordinal in the slug. No new course inherits an existing course's URL shape.
+          required: true

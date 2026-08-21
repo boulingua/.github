@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: boulingua — courses and hub
+    url: https://boulingua.github.io/website/
+    about: The eighteen courses, the design system and the language map. Start here if you are looking for material rather than reporting a defect.
+  - name: Ressourcen-Hub
+    url: https://boulingua.github.io/ressources/
+    about: The curated catalogue of openly licensed sources, in German, English and French.
+  - name: Kontakt und Impressum
+    url: https://boulingua.github.io/website/contact/
+    about: For anything that is not a defect report — licensing questions, reuse, correspondence with the author.
+  - name: Contribution rules
+    url: https://github.com/boulingua/.github/blob/main/CONTRIBUTING.md
+    about: Read before opening anything. Pull requests are generally not accepted, and no contribution may change a URL or a slug.

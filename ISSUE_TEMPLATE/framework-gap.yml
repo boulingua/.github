@@ -1,0 +1,128 @@
+name: Framework gap
+description: A gap or defect in the curriculum descriptor framework
+title: "[framework] "
+labels: ["framework-gap", "curriculum"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Filed against **`boulingua/curriculum`**, the descriptor framework — 88 scales, 79 in scope,
+        1,170 statements across seven level files.
+
+        **A course never adds a statement.** When a course hits a cell the framework does not carry,
+        it files here, pins its current framework tag and continues. The framework maintainer adds
+        the cell in the next **MINOR** release; IDs are additive, so nothing downstream breaks, and
+        the course bumps its pin when it chooses.
+
+        The ID grammar is `{LEVEL}.{DOMAIN}.{scale-slug}.{NN}` — `LEVEL ∈ {preA1, A1, A2, B1, B2, C1, C2}`,
+        `DOMAIN ∈ {REC, PROD, INT, MED, PLUR, LING, SOC, PRAG}`, slug `[a-z0-9-]+` present in
+        `schema/scale-registry.yml`, ordinal exactly two digits.
+  - type: input
+    id: pin
+    attributes:
+      label: Framework version you are pinned to
+      placeholder: v1.1.0
+    validations:
+      required: true
+  - type: input
+    id: consumer
+    attributes:
+      label: Consuming repository and level being authored
+      placeholder: daf — A2
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of gap
+      options:
+        - Missing cell — the CV has a descriptor at this level and scale, the framework does not
+        - Falsely-empty scale — zero statements at every level while sibling scales are populated
+        - Dangling or deprecated ID referenced by a course manifest
+        - ID grammar violation in the framework itself
+        - Duplicate or out-of-span ID
+        - Scale registry — a slug is missing, or in_scope is wrong
+        - known-empty-scales.yml entry needed, with a CV citation
+        - Bildungsplan-BW crosswalk code does not resolve
+        - Rubric missing for an assessed skill
+        - Statement voice or wording
+        - coverage.yml disagrees with a recomputation
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Level
+      options:
+        - preA1
+        - A1
+        - A2
+        - B1
+        - B2
+        - C1
+        - C2
+        - not level-specific
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      options:
+        - REC — reception
+        - PROD — production
+        - INT — interaction
+        - MED — mediation
+        - PLUR — plurilingual and pluricultural
+        - LING — linguistic competence
+        - SOC — sociolinguistic competence
+        - PRAG — pragmatic competence
+        - not domain-specific
+    validations:
+      required: true
+  - type: input
+    id: scale
+    attributes:
+      label: Scale slug
+      description: As it appears in schema/scale-registry.yml. The same slug can exist in two domains.
+      placeholder: co-operating
+    validations:
+      required: true
+  - type: input
+    id: ids
+    attributes:
+      label: Descriptor IDs involved
+      placeholder: B1.INT.conversation.02
+  - type: textarea
+    id: cv
+    attributes:
+      label: CEFR Companion Volume citation
+      description: |
+        Page and scale name in the CV supporting the gap. A cell is only excusable with a citation,
+        and a cell is only mintable where the CV actually has a descriptor — never invented.
+        Do not paste Council of Europe descriptor text; cite it.
+    validations:
+      required: true
+  - type: dropdown
+    id: exit_code
+    attributes:
+      label: Resolver exit code you are seeing
+      description: From `conformance_audit.py resolve`.
+      options:
+        - "0 — conformant, reporting a gap anyway"
+        - "2 — manifest fails schema"
+        - "3 — malformed, dangling, deprecated, duplicated or out-of-span ID"
+        - "4 — front-matter and manifest drift, or coverage --check diff"
+        - "5 — declared level not met, a silently missing scale"
+        - "6 — version-pin mismatch"
+        - not run
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: What is missing, and what the course needed it for
+      description: Name the teaching intent the framework cannot currently express.
+    validations:
+      required: true

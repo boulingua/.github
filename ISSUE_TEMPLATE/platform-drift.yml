@@ -1,0 +1,70 @@
+name: Platform drift
+description: A repository has diverged from kit, from the workflow rules, or from its pinned versions
+title: "Platform drift — "
+labels: ["platform-drift", "org"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Filed automatically by `org-audit.yml`, which fans out over all content repositories and
+        keeps **one** issue per week, `Platform drift — week YYYY-Wnn`, updated in place. A
+        single-author operation cannot absorb twenty-one notification streams.
+
+        File by hand only for drift the audit does not yet detect.
+  - type: input
+    id: repos
+    attributes:
+      label: Repositories affected
+      placeholder: efl, fle
+    validations:
+      required: true
+  - type: dropdown
+    id: klass
+    attributes:
+      label: Drift class
+      options:
+        - A project file sits at a kit-owned path with no kit-overrides.yml entry
+        - An override's kit_base is more than one minor behind
+        - _materials/kit.lock does not match kit/RELEASE/SHA256SUMS
+        - hugo.toml carries a key outside the per-course allowlist
+        - .github/workflows/deploy.yml differs from kit/templates/deploy.yml
+        - A step-level continue-on-error
+        - A "|| true" on a gate command
+        - A workflow declares contents write, git push, or a commit action
+        - Hugo version behind the pinned 0.159.2
+        - A literal go-version pin instead of go-version-file go.mod
+        - kit or curriculum pin behind the current tag
+        - Deprecated Hugo API in use (.Site.Data rather than hugo.Data)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: locations
+    attributes:
+      label: Exact locations
+      description: file:line for each hit.
+      placeholder: efl/.github/workflows/hugo.yml:128
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Audit output
+      description: The failing lines from `bin/kit check`, `kit_drift.py` or the org audit run.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: run
+    attributes:
+      label: Link to the workflow run
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Blocking — a gate is suppressed, or a workflow can write to main
+        - Blocking — a revenue-path check is affected
+        - Non-blocking — cosmetic or version lag
+    validations:
+      required: true

@@ -1,0 +1,94 @@
+name: Unit defect
+description: An error in a teaching unit or an exam page — Fehler in einer Einheit oder Prüfungsseite
+title: "[unit] "
+labels: ["unit-defect", "content"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report the defect here rather than opening a pull request. boulingua is single-author OER.
+
+        **Do not propose a change to the page URL or to a `slug:` line.** Page URLs carry VG Wort
+        Zählmarken — the author's statutory remuneration — and 821 are registered across the three
+        live courses. See [CONTRIBUTING.md](https://github.com/boulingua/.github/blob/main/CONTRIBUTING.md).
+
+        *Auf Deutsch schreiben ist völlig in Ordnung.*
+  - type: dropdown
+    id: course
+    attributes:
+      label: Course
+      description: Which repository the page belongs to.
+      options:
+        - efl (English)
+        - fle (French)
+        - daf (German)
+        - ressources
+        - website
+        - other
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Page URL
+      description: The full published URL of the affected page. Do not rewrite it.
+      placeholder: https://boulingua.github.io/fle/track_gm_kl06/units/salutations-et-prenoms/
+    validations:
+      required: true
+  - type: dropdown
+    id: page_type
+    attributes:
+      label: Page type
+      options:
+        - unit
+        - exam
+        - appendix or editorial page
+        - hub or index page
+        - legal page (Impressum, Datenschutz, Haftungsausschluss)
+        - not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of defect
+      options:
+        - Factual error
+        - Target-language error (grammar, spelling, register)
+        - German chrome or instruction text
+        - Broken internal link
+        - Broken or missing download
+        - Audio does not play, or does not match the transcript
+        - Accessibility (contrast, focus, screen reader, heading order)
+        - Differentiation (niveau markers, output bands)
+        - Assessment (points do not sum, Notenschlüssel gap or overlap)
+        - Missing or unsourced culture window
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wrong
+      description: Quote the exact text or name the exact element. A screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What it should say instead
+      description: Optional, but a concrete correction is much faster to act on than a description of one.
+  - type: input
+    id: source
+    attributes:
+      label: Source for the correction
+      description: Where the correct form is documented — a dictionary, a Bildungsplan section, a CEFR descriptor ID.
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - label: I am not asking for the page URL or a `slug:` value to be changed.
+          required: true
+        - label: This issue contains no private VG Wort identification code.
+          required: true

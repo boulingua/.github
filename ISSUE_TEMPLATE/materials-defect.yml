@@ -1,0 +1,94 @@
+name: Materials defect
+description: A slide deck, worksheet, thumbnail, audio file or transcript is wrong or missing
+title: "[materials] "
+labels: ["materials-defect", "materials"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Materials are committed artefacts. Nothing on the deploy path generates them — CI verifies,
+        it does not generate. So a defect here is a defect in a file that exists in the repository,
+        and it is fixed by regenerating locally with the pinned toolchain and committing the result.
+
+        Renaming an artefact is safe; renaming the page it belongs to is not. `material_slug` names
+        a PDF and nothing else. It is never a URL input.
+  - type: dropdown
+    id: course
+    attributes:
+      label: Course
+      options:
+        - efl
+        - fle
+        - daf
+        - other
+    validations:
+      required: true
+  - type: dropdown
+    id: artefact
+    attributes:
+      label: Artefact
+      options:
+        - Slide deck (PDF)
+        - Worksheet (PDF)
+        - Exam PDF
+        - Thumbnail (PNG)
+        - Audio (OGG)
+        - Transcript
+        - Materials Network bundle (cytoscape)
+    validations:
+      required: true
+  - type: input
+    id: unit
+    attributes:
+      label: Unit and material slug
+      placeholder: track-e/kl09/unit06 — track-e_kl09_unit06-interview-and-portrait
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: File path or download URL
+      placeholder: /efl/materials/presentations/track-e_kl09_unit06-interview-and-portrait.pdf
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of defect
+      options:
+        - Download 404s
+        - Orphan artefact — the unit it belonged to is gone
+        - PDF /Title missing or empty
+        - PDF /Author does not contain Le Boulanger
+        - PDF /Creator, /Subject or /Keywords missing
+        - Missing glyph — .notdef box or U+FFFD in the rendered PDF
+        - Wrong script or wrong font selected for the language
+        - Attribution watermark missing on one or more pages
+        - Colophon licence string does not match hugo.toml params.license
+        - Accent rule is the wrong colour for the course
+        - Thumbnail missing, or width not 1000 px
+        - thumbs.lock digest does not match the PDF
+        - Audio missing from the manifest, or on disk but unlisted
+        - Audio does not match the transcript
+        - Wrong voice, or a neighbouring language's voice
+        - A block visible on the web page is absent from the worksheet
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: What you observed
+      description: |
+        For glyph defects give the codepoint and the character. For metadata defects paste the
+        relevant `pdfinfo` lines. For audio give the manifest entry.
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - label: I am not asking for the page URL or a `slug:` value to be changed. A material slug rename is not a page rename.
+          required: true

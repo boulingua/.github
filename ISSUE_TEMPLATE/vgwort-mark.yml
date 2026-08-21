@@ -1,0 +1,90 @@
+name: VG Wort mark
+description: A problem with a Zählmarke — coverage, delivery, keying or reconciliation
+title: "[vgwort] "
+labels: ["vgwort", "restricted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## **Never paste a private VG Wort identification code into an issue.**
+
+        **A Zählmarke has two codes. The *public* code — the 32 hex characters in the pixel URL,
+        `https://vg09.met.vgwort.de/na/<32 hex>` — may appear here. The *private* identification
+        code may not: not in the title, not in the body, not in an attachment, not in a screenshot,
+        not in a pasted CI log. GitHub issues are public and are not deletable from every mirror
+        that has already fetched them.**
+
+        The private codes live only in `~/vgwort/ledger.csv`, outside every repository, backed up
+        with the author's private data. No `private_id` value exists in any repo today. That
+        property is currently held by care; from here it is held by this form and by the PR
+        checklist.
+
+        If you have already pasted a private code somewhere, say so in one sentence without
+        repeating it, and the mark will be retired and re-drawn.
+  - type: dropdown
+    id: repo
+    attributes:
+      label: Repository
+      options:
+        - efl (402 marks)
+        - fle (351 marks)
+        - daf (68 marks)
+        - ressources (0 marks)
+        - other
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong
+      options:
+        - Mark does not render on its page at all
+        - Mark renders on more than one page
+        - Mark renders on a different URL than the one it is keyed to
+        - Pixel is lazy, hidden, script-injected, or has no preload (gate C5)
+        - Page is below the 1,800 rendered-character Mindestumfang but carries a mark
+        - Mark sits on a hub, paginated or legal page (gate C3)
+        - Entry has no registered_at date (gate C1)
+        - Ledger and T.O.M. disagree on the registered URL
+        - A URL change has already happened and a re-key is needed
+        - Same code appears in two repositories
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: public_id
+    attributes:
+      label: Public code (32 hex characters only)
+      description: "The part after /na/ in the pixel URL. Public code only. Leave blank if you are unsure which code you are holding."
+      placeholder: 0a1b2c3d4e5f60718293a4b5c6d7e8f9
+  - type: input
+    id: url
+    attributes:
+      label: Page URL the mark is keyed to
+      placeholder: https://boulingua.github.io/efl/track-e/kl09/units/unit06-interview-and-portrait/
+    validations:
+      required: true
+  - type: input
+    id: observed_url
+    attributes:
+      label: URL where the pixel actually renders, if different
+      description: Leave blank if the mark renders nowhere.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: |
+        What you ran and what it printed — a gate name (C1, C2, C3, C4, C5), a `bin/kit vgwort`
+        command, the relevant lines of built HTML. Redact any private code before pasting.
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - label: This issue contains no private VG Wort identification code, in any field or attachment.
+          required: true
+        - label: I am not proposing a URL or slug change as the fix. If a URL must change, the re-key protocol decides it, not this issue.
+          required: true
