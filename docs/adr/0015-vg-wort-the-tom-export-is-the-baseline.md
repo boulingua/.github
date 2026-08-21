@@ -2,7 +2,7 @@
 
 - **Status:** Accepted, 2026-08-21
 - **Deciders:** S. Le Boulanger
-- **Related:** ADR 0003 (URLs are frozen), ADR 0014 (one exam page per unit), ADR 0016 (release policy), ADR 0019 (`url-lock.csv` is generated from the export)
+- **Related:** ADR 0003 (URLs are frozen), ADR 0014 (one exam page per unit), ADR 0016 (release policy), ADR 0019 (`url-lock.csv` is generated from the export) · ADR 0020 (that reconciliation is deferred to the end; a provisional lock holds the URL space meanwhile)
 
 ## Context
 

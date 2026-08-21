@@ -2,7 +2,7 @@
 
 - **Status:** Accepted, 2026-08-21
 - **Deciders:** S. Le Boulanger
-- **Related:** ADR 0002 (the gate battery), ADR 0012 (one framework), ADR 0017 (three taxonomic axes), ADR 0019 (T.O.M. reconciliation)
+- **Related:** ADR 0002 (the gate battery), ADR 0012 (one framework), ADR 0017 (three taxonomic axes), ADR 0019 (T.O.M. reconciliation) · ADR 0020 (that reconciliation is deferred to the end; a provisional lock holds the URL space meanwhile)
 
 ## Context
 

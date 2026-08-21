@@ -2,7 +2,7 @@
 
 - **Status:** Accepted, 2026-08-21
 - **Deciders:** S. Le Boulanger
-- **Related:** ADR 0002 (`boulingua.yml`), ADR 0015 (VG Wort ledger), ADR 0019 (`url-lock.csv` from the T.O.M. export)
+- **Related:** ADR 0002 (`boulingua.yml`), ADR 0015 (VG Wort ledger), ADR 0019 (`url-lock.csv` from the T.O.M. export) · ADR 0020 (that reconciliation is deferred to the end; a provisional lock holds the URL space meanwhile)
 
 ## Context
 

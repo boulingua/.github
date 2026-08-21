@@ -2,7 +2,7 @@
 
 - **Status:** Accepted, 2026-08-21
 - **Deciders:** S. Le Boulanger
-- **Related:** ADR 0005 (design tokens), ADR 0012 (one framework plus secondary anchors), ADR 0003 (URLs are frozen), ADR 0019 (T.O.M. reconciliation)
+- **Related:** ADR 0005 (design tokens), ADR 0012 (one framework plus secondary anchors), ADR 0003 (URLs are frozen), ADR 0019 (T.O.M. reconciliation) · ADR 0020 (that reconciliation is deferred to the end; a provisional lock holds the URL space meanwhile)
 
 ## Context
 

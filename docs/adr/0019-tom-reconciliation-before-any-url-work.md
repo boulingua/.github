@@ -1,9 +1,9 @@
 # ADR 0019 — `url-lock.csv` is generated from a T.O.M. export; no URL work proceeds before the diff closes
 
-- **Status:** Accepted, 2026-08-21
+- **Status:** Superseded by [ADR 0020](0020-tom-reconciliation-deferred-provisional-url-lock.md), 2026-08-21 — the sequencing below is no longer in force. The analysis, the measured evidence and the reconciliation procedure stand and are still the record; only the *when* changed.
 - **Deciders:** S. Le Boulanger
 - **Related:** ADR 0003 (URLs are frozen on three axes), ADR 0015 (VG Wort operations), ADR 0012 (removal of the numeric tag terms), ADR 0017 (`topic` reclassification), ADR 0014 (new exam pages)
-- **Blocks:** P0.8 (freeze the URL space), P3.2, P3.3 and P3.4a (the flat → leaf-bundle conversions), and every re-slug in the programme
+- **Blocks:** nothing, as of ADR 0020. Retained because the exposure it measures is unchanged and the procedure in its Decision section is the one that will run.
 
 ## Context
 

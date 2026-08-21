@@ -76,21 +76,30 @@ Everything else is a commit.
 | [0016](0016-semver-for-the-kit-calver-for-courses-main-only.md) | SemVer for `kit` and `curriculum`, CalVer for courses, `main` is the only long-lived branch | Accepted 2026-08-21 |
 | [0017](0017-topic-competence-area-and-skills-are-three-axes.md) | `topic`, `bildungsplan.competence_areas` and `skills_focus` are three axes, not one | Accepted 2026-08-21 |
 | [0018](0018-programme-ii-cfl-jfl-afl-pfa-deferred.md) | Programme II: `cfl`, `jfl`, `afl` and `pfa` defer out of this programme | Accepted 2026-08-21 |
+| [0019](0019-tom-reconciliation-before-any-url-work.md) | `url-lock.csv` is generated from a T.O.M. export; no URL work before the diff closes | **Superseded by 0020** 2026-08-21 |
+| [0020](0020-tom-reconciliation-deferred-provisional-url-lock.md) | The T.O.M. reconciliation defers to the end; a provisional URL lock holds the line | Accepted 2026-08-21 |
 
-**0019 is reserved.** Records 0003 and 0012 already cite it for the rule that `vgwort/url-lock.csv`
-is generated from a T.O.M. export and never from a sitemap crossed with `marks.yaml`. ADR 0015
-carries that rule today; 0019 stays reserved rather than reassigned, because the ordinal is already
-in the tree and a reused number is worse than an unused one.
+**0019 and 0020 are a pair, and both stay.** 0019 measured the exposure and drew a dependency from
+it; 0020 keeps the measurement and narrows the dependency. Read 0019 for *what is wrong* and 0020 for
+*when it gets fixed*. Superseded records are never deleted — 0019 is the evidence for why 0020 was
+needed, and removing it would make the second decision unfalsifiable.
 
 ## Open
 
-**ADR 0003 and ADR 0015 are blocked on the T.O.M. export.** The repositories know which URL a code
-*renders* on; only T.O.M. knows which URL a code is *registered* against, and there is direct
-evidence the two have diverged. 399 of `efl`'s 402 marks carry `registered_at: '2026-04-30'`, six
-days before the Quarto→Hugo migration of 2026-05-06; `efl` and `fle` manifests remain keyed on the
-Quarto `qmd_path`; `aliases:` sit on 405 `efl` pages, 202 `fle` and 80 `daf`, and Hugo's built-in
-alias output is a bare meta-refresh stub carrying no pixel. Up to 592 of the 821 marks may therefore
-be registered against URLs that no longer render one. `url-lock.csv` cannot be generated until the
-export exists, because a lock file built from the wrong baseline would teach the gate to defend the
-wrong URLs forever, with perfect fidelity. **Nothing that changes a URL proceeds until that diff
-closes.**
+**The T.O.M. reconciliation is deferred to the end of the programme** (ADR 0020). The exposure ADR
+0019 measured is unchanged: up to 592 of the 821 marks may be registered against Quarto `.html` URLs
+that no longer render a pixel, and if so they earn nothing for the programme's duration. That cost is
+accepted, not resolved.
+
+What is *not* deferred is prevention. `vgwort/url-lock-provisional.csv` is derived from the built
+sitemap crossed with `marks.yaml`, deliberately omits the `registered_url` column so it can never be
+mistaken for the reconciled lock, and gate A3 blocks any pull request that moves a locked URL without
+declaring it. From the day it lands no *new* divergence can be introduced. The question the export
+answers — whether the existing registrations are right — is the only one still open.
+
+**The reconciliation is a release gate, not a wish.** No repository may cut its first CalVer tag under
+the completed programme while `url-lock-provisional.csv` is still present in it. The filename is the
+reminder.
+
+**A twenty-code hand sample closes the whole question for about two hours of portal work** and is
+worth taking the first time T.O.M. is open for any other reason. It is unscheduled by choice.
