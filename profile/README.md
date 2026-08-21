@@ -74,12 +74,14 @@ The landing page that ties everything together — about, philosophy, references
 | [`fle`](https://github.com/boulingua/fle) | Hugo | French curriculum, Klassen 6–13 |
 | [`daf`](https://github.com/boulingua/daf) | Hugo | German curriculum, CEFR A1–C1 |
 | [`ressources`](https://github.com/boulingua/ressources) | Hugo | Curated open-license resources hub |
-| [`slidegen`](https://github.com/boulingua/slidegen) | LaTeX (Beamer/XeLaTeX) | Branded slide-deck template |
-| [`sheetgen`](https://github.com/boulingua/sheetgen) | LaTeX | Branded worksheet template |
-| [`audiogen`](https://github.com/boulingua/audiogen) | Python | Native-voice audio pipeline (OGG) |
+| [`kit`](https://github.com/boulingua/kit) | Hugo module · LaTeX · Python | The platform every course imports: shared layouts and assets, branded slide-deck and worksheet templates, native-voice audio pipeline, build and gate scripts |
 
-The four content sites are deployed via **GitHub Pages**; the toolchain repos
-generate the branded print and audio materials the courses ship with.
+The four content sites are deployed via **GitHub Pages**. A course repo holds
+content, marks, materials, brand and configuration — no code: the shared surface
+arrives from `kit` as a Hugo module, a pinned CI checkout, and a digest-locked
+`_materials/` tree. The earlier toolchain repos — `pagegen`, `slidegen`,
+`sheetgen` and `audiogen` — are **archived**; their histories are preserved
+inside `kit`.
 
 Additional single-letter repos (`afl`, `cfl`, `gfl`, …) are **scaffolds for
 future languages** — the platform is architected to extend beyond its first
@@ -93,7 +95,7 @@ All sister sites share an **identical design system** — same navigation, same 
 
 Within that shared frame, **each language carries its own signature accent colour** — chosen to be distinct, accessible, and, by rule, *not* a colour found in the language's national flag — together with a matching pentagon icon. The colour is applied consistently across the site, the READMEs, and the printed materials, so each language stays recognisable at a glance. The full palette and the reasoning behind it are documented on the [design & colours page](https://boulingua.github.io/website/design/).
 
-Every teaching unit ships in **multiple formats**: an HTML page for browser study, a printable slide deck and worksheet (both generated from the branded [`slidegen`](https://github.com/boulingua/slidegen)/[`sheetgen`](https://github.com/boulingua/sheetgen) LaTeX templates), and native-voice audio. PDFs carry attribution watermarks; CI gates block deployment for missing copyright metadata, unfilled Impressum placeholders, or commercial sources in the Ressourcen-Hub.
+Every teaching unit ships in **multiple formats**: an HTML page for browser study, a printable slide deck and worksheet (both generated from the branded LaTeX templates in [`kit`](https://github.com/boulingua/kit)), and native-voice audio. PDFs carry attribution watermarks; CI gates block deployment for missing copyright metadata, unfilled Impressum placeholders, or commercial sources in the Ressourcen-Hub.
 
 ---
 
