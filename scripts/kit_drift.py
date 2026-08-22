@@ -70,16 +70,24 @@ def main() -> int:
             #
             # What a fork actually is: a file the kit also ships. That is the
             # thing that silently diverges.
+            # Compare RELATIVE PATHS, not basenames. Matching on the file name
+            # alone made fle/layouts/materiel/list.html a "fork" of the kit's
+            # layouts/materials/list.html — two different templates that share
+            # four letters. A fork is the same file at the same path; anything
+            # else is a coincidence of naming, and list.html is about the most
+            # likely name to collide by accident in a Hugo project.
             kit_dir = org / "kit" / d
-            kit_names = {q.name for q in kit_dir.rglob("*")} if kit_dir.is_dir() else set()
+            kit_names = ({q.relative_to(kit_dir).as_posix() for q in kit_dir.rglob("*")
+                          if q.is_file()} if kit_dir.is_dir() else set())
             # A declared override is still a fork; declaring it buys time, not
             # forgiveness. Every entry needs a reason and a destination, and an
             # entry whose file no longer exists is spent and fails — the same
             # contract as org-audit-exceptions.yml and placeholder-exceptions.yml.
             forks = sorted(q for q in p.rglob("*")
-                           if q.is_file() and q.name in kit_names
+                           if q.is_file() and q.relative_to(p).as_posix() in kit_names
                            and q.relative_to(repo).as_posix() not in overrides.get(repo.name, {}))
-            own = [q for q in p.rglob("*") if q.is_file() and q.name not in kit_names]
+            own = [q for q in p.rglob("*")
+                   if q.is_file() and q.relative_to(p).as_posix() not in kit_names]
             for q in forks:
                 print(f"::error::{repo.name}/{q.relative_to(repo)} — the kit ships "
                       f"a file of this name. A course copy of it is a fork, and a "
