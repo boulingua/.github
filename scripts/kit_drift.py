@@ -32,6 +32,13 @@ def main() -> int:
     org = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     repos = sorted(p for p in org.iterdir() if p.is_dir() and not p.name.startswith("."))
     bad, checked, pre_adoption = 0, 0, []
+    overrides: dict[str, dict] = {}
+    for repo in repos:
+        f = repo / "kit-overrides.yml"
+        if f.exists():
+            import yaml
+            doc = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+            overrides[repo.name] = {e["path"]: e for e in doc.get("overrides", [])}
     for repo in repos:
         if repo.name in NOT_A_COURSE:
             continue
@@ -50,13 +57,57 @@ def main() -> int:
         checked += 1
         for d in KIT_OWNED:
             p = repo / d
-            if p.exists() and any(p.rglob("*")):
-                n = len(list(p.rglob("*")))
-                print(f"::error::{repo.name}/{d}/ exists with {n} file(s). This "
-                      f"directory arrives from the kit as a Hugo module — a copy "
-                      f"here is a fork, and a fork is what the module was adopted "
-                      f"to make impossible.")
+            if not (p.exists() and any(p.rglob("*"))):
+                continue
+            # Compare FILE BY FILE against the kit, not directory by directory.
+            # The coarse rule said a course may not have a scripts/ directory at
+            # all, which is wrong in the one case that matters: daf's four
+            # authoring tools generate German audio and daf-specific tags, the
+            # kit has no equivalent, and there is nowhere else for them to live.
+            # A rule that forbids them either gets a blanket exception — which
+            # then covers the real forks too — or gets renamed around, which is
+            # worse because the next reader believes it.
+            #
+            # What a fork actually is: a file the kit also ships. That is the
+            # thing that silently diverges.
+            kit_dir = org / "kit" / d
+            kit_names = {q.name for q in kit_dir.rglob("*")} if kit_dir.is_dir() else set()
+            # A declared override is still a fork; declaring it buys time, not
+            # forgiveness. Every entry needs a reason and a destination, and an
+            # entry whose file no longer exists is spent and fails — the same
+            # contract as org-audit-exceptions.yml and placeholder-exceptions.yml.
+            forks = sorted(q for q in p.rglob("*")
+                           if q.is_file() and q.name in kit_names
+                           and q.relative_to(repo).as_posix() not in overrides.get(repo.name, {}))
+            own = [q for q in p.rglob("*") if q.is_file() and q.name not in kit_names]
+            for q in forks:
+                print(f"::error::{repo.name}/{q.relative_to(repo)} — the kit ships "
+                      f"a file of this name. A course copy of it is a fork, and a "
+                      f"fork is what the module was adopted to make impossible.")
+            bad += len(forks)
+            if own and not forks:
+                print(f"::notice::{repo.name}/{d}/ holds {len(own)} file(s) the kit "
+                      f"does not ship. Course-specific tooling is allowed here; "
+                      f"what is not allowed is a copy of something the kit owns.")
+    # Spent overrides. A declaration that outlives the file it covers is a
+    # standing permission for a fork nobody has.
+    for name, entries in overrides.items():
+        for path, e in entries.items():
+            if not (org / name / path).exists():
+                print(f"::error::{name}/kit-overrides.yml declares {path}, which "
+                      f"does not exist. The override is spent — delete the entry. "
+                      f"Its destination was {e.get('destination', '(none given)')}")
                 bad += 1
+            elif not (str(e.get("reason", "")).strip()
+                      and str(e.get("destination", "")).strip()):
+                print(f"::error::{name}/kit-overrides.yml: {path} needs both a "
+                      f"reason and a destination. An override with neither is a "
+                      f"permanent fork with a config entry.")
+                bad += 1
+            else:
+                print(f"::warning::{name}/{path} is a declared fork of a kit file, "
+                      f"scheduled for {e['destination']}")
+
     print(f"  {checked} course(s) importing the kit module, checked")
     if pre_adoption:
         print(f"::notice::{len(pre_adoption)} course(s) have not adopted the module "
