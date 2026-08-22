@@ -57,6 +57,7 @@ def main() -> int:
     if not repos:
         repos = sorted(p.parent for p in org.glob("*/.git"))
     bad, scanned = 0, 0
+    used: set[tuple[str, str]] = set()
 
     deferred = 0
     for repo in repos:
@@ -80,6 +81,7 @@ def main() -> int:
                        or (OR_TRUE.search(line) and GATE_CMD.search(line)))
                 if sup:
                     if sched:
+                        used.add((sched["repo"], sched["file"]))
                         print(f"::warning::{rel}:{i} gate suppression — known, "
                               f"scheduled for {sched['destination']}")
                         deferred += 1
@@ -88,6 +90,21 @@ def main() -> int:
                               f"either blocking or written to warn, never "
                               f"suppressed: {line.strip()[:60]}")
                         bad += 1
+
+    # An exception outlives its reason silently. These six are scheduled for
+    # P3.2 through P3.4, and when a retrofit lands the entry stops matching
+    # anything — at which point it is no longer an exception, it is a line in a
+    # file that says this org tolerates a suppression it has already removed.
+    # So a stale entry fails, and clearing it is part of finishing the retrofit.
+    stale = [e for e in exc.get("scheduled", [])
+             if (e["repo"], e["file"]) not in used
+             and e["repo"] not in archived
+             and (org / e["repo"]).exists()]
+    for e in stale:
+        print(f"::error::org-audit-exceptions.yml: {e['repo']}/{e['file']} carries "
+              f"no suppression any more — the exception is spent. Delete the entry; "
+              f"its destination was {e['destination']}")
+        bad += 1
 
     print(f"  {len(repos) - len(archived)} live repo(s), {scanned} workflow file(s) "
           f"scanned; {len(archived)} archived skipped")

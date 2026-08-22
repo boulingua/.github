@@ -27,17 +27,20 @@ on:
         type: string
         default: v1.1.0
 
+# The floor. Each job narrows further; nothing here grants write.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
+  # Two jobs, because gating and publishing are different privileges. `build`
+  # needs read access and nothing else; only `deploy` claims pages: write and
+  # the github-pages environment. One combined job would hand every pull
+  # request the ability to publish, and a job-level `environment:` claims that
+  # environment on every run whether or not it ever deploys.
   build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      contents: read
     steps:
       - name: Checkout course
         uses: actions/checkout@v4
@@ -84,8 +87,17 @@ jobs:
         run: '[[ -f package-lock.json ]] && npm ci --no-audit --no-fund || echo "no package-lock.json"'
         shell: bash
 
+      # Setup Pages MUST precede the build: it is what resolves base_url, and
+      # Hugo bakes the baseURL into every canonical link, the sitemap and every
+      # og:url at build time. Ordered the other way the expression is empty and
+      # the site builds at "/" — which still deploys, still looks right when
+      # clicked through, and is wrong in exactly the places nobody opens.
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
       - name: Build site
-        run: hugo --minify --gc --panicOnWarning --baseURL "${{ steps.pages.outputs.base_url || '' }}/"
+        run: hugo --minify --gc --panicOnWarning --baseURL "${{ steps.pages.outputs.base_url }}/"
 
       # THE BATTERY. One step, one entry point, the same one used locally.
       # Adding a gate here instead of to the battery breaks the equivalence and
@@ -93,14 +105,25 @@ jobs:
       - name: kit check
         run: python .kit/bin/kit check . --ci
 
-      - name: Setup Pages
-        id: pages
-        uses: actions/configure-pages@v5
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with: { path: ./public }
 
+  # Publishing is main-only and never runs for a pull request. A PR runs the
+  # whole battery — stages A through D — and publishes nothing, which is the
+  # point: a contributor gets the same verdict the author does, with none of
+  # the access.
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - name: Deploy
         id: deploy
         uses: actions/deploy-pages@v4
