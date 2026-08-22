@@ -1,0 +1,26 @@
+# Rules that only make sense across all repos at once, so they cannot live in
+# any one of them. Weekly, plus on demand.
+name: org-audit
+on:
+  schedule: [{ cron: "0 6 * * 1" }]
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install --quiet pyyaml
+      # Clones every live repo shallowly. The audit reads workflow files only.
+      - name: Fetch the org
+        run: |
+          mkdir -p org && cd org
+          for r in $(gh repo list boulingua --limit 100 --json name,isArchived \
+                     -q '.[] | select(.isArchived|not) | .name'); do
+            git clone --depth 1 -q "https://github.com/boulingua/$r.git" "$r"
+          done
+        env: { GH_TOKEN: "${{ github.token }}" }
+      - name: Audit
+        run: python scripts/org_audit.py org

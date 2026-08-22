@@ -1,0 +1,80 @@
+# The escape hatch, opt-in and deliberately awkward.
+#
+# _materials/ is vendored and digest-locked: a course holds the built PDFs, and
+# `kit check` verifies their hashes against kit.lock. Nothing in CI compiles
+# LaTeX, because a texlive install is 4 GB and a worksheet does not change
+# between commits.
+#
+# But a course sometimes DOES need to rebuild — new brand mark, a token change,
+# a sheet that was hand-corrected. Doing that on a laptop and pushing binaries
+# is how the vendored copies drift out of anyone's sight, so there is a path
+# here. It runs on workflow_dispatch only, it uploads an artifact, and it
+# does NOT commit: the author downloads, inspects, relocks and pushes.
+#
+# The awkwardness is the point. A one-click rebuild that commits is a workflow
+# with write access to main, which the org audit forbids for good reason.
+name: materials-latex
+
+on:
+  workflow_call:
+    inputs:
+      paths:
+        description: Space-separated .tex files to build, relative to the repo.
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      paths:
+        description: Space-separated .tex files to build, relative to the repo.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  latex:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the kit at its pinned tag
+        uses: actions/checkout@v4
+        with:
+          repository: boulingua/kit
+          ref: v1
+          path: .kit
+
+      - name: TeX Live
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            texlive-xetex texlive-latex-extra texlive-lang-all fonts-noto
+
+      - name: Compile
+        run: |
+          set -euo pipefail
+          export TEXINPUTS=".kit/latex//:_materials//:"
+          for f in ${{ inputs.paths }}; do
+            echo "── $f"
+            xelatex -interaction=nonstopmode -halt-on-error \
+                    -output-directory "$(dirname "$f")" "$f"
+          done
+
+      - name: Metadata gate
+        run: |
+          python -m pip install --quiet pypdf pyyaml
+          python .kit/scripts/verify_pdf_metadata.py .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: materials-pdf
+          path: '**/*.pdf'
+          retention-days: 7
+
+      - name: How to land these
+        run: |
+          echo "::notice::Nothing was committed. Download the artifact, check"
+          echo "::notice::the PDFs, then locally: kit lock && git commit."
+          echo "::notice::A workflow that committed would need write access to"
+          echo "::notice::main, which the org audit forbids."

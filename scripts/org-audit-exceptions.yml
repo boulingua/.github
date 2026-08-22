@@ -1,0 +1,35 @@
+# Findings the org audit knows about and is not going to fail on today.
+#
+# Every entry carries a reason and a destination. An exception with neither is
+# how a permanent suppression starts, so both are required and the audit says
+# so when it skips one.
+
+archived:
+  # Read-only on GitHub. Nobody can push a fix, and the code lives on inside
+  # `kit` where the findings do not exist.
+  - pagegen
+  - slidegen
+  - sheetgen
+  - audiogen
+
+scheduled:
+  - repo: efl
+    file: .github/workflows/hugo.yml
+    reason: >-
+      Three suppressions, one of them the closest thing this repo has to a URL
+      drift check. All three go when efl adopts the twelve-line caller.
+    destination: P3.4
+  - repo: fle
+    file: .github/workflows/hugo.yml
+    reason: >-
+      The Quarto zombie: installs Quarto and TinyTeX on every push and renders
+      zero files against zero .qmd sources, surviving only on this suppression.
+      Deleted outright, not fixed.
+    destination: P3.3
+  - repo: ressources
+    file: .github/workflows/link-check.yml
+    reason: >-
+      Two lychee suppressions. External link rot is a real advisory signal and
+      a bad blocking one — a third party's outage is not this repo's defect —
+      so these move to the weekly advisory job rather than becoming blocking.
+    destination: S1 weekly advisory

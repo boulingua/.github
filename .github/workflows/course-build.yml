@@ -1,0 +1,106 @@
+# The one reusable workflow. Every course calls this and nothing else.
+#
+# ONE caller, not five. Four separate specifications each proposed their own
+# reusable workflow; eighteen courses times five `uses:` blocks would be ninety
+# call sites to keep in sync, and they would not stay in sync. This sequences
+# every stage internally instead.
+#
+# It does NOT re-implement the gate battery. It checks out `kit` at a pinned tag
+# and runs `bin/kit check --ci` — the same entry point an author runs locally.
+# That is what makes "if it passes locally it passes in CI" true rather than
+# aspirational, and it is why kit's CLI is on the critical path for every gate.
+#
+# Everything configurable lives in the course's boulingua.yml, read by the
+# scripts themselves. There is deliberately no `with:` block: that keeps the
+# caller a constant, and a constant is drift-gatable.
+name: course-build
+
+on:
+  workflow_call:
+    inputs:
+      kit_ref:
+        description: "kit tag to check out. Courses pin a major and move deliberately."
+        type: string
+        default: v1
+      curriculum_ref:
+        description: "curriculum tag. A CI-time checkout, never vendored (ADR-0011)."
+        type: string
+        default: v1.1.0
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout course
+        uses: actions/checkout@v4
+        with: { submodules: recursive, fetch-depth: 0 }
+
+      # kit and curriculum arrive as checkouts at a pinned tag. Never vendored,
+      # never a submodule: a course repo contains content, not code.
+      - name: Checkout kit
+        uses: actions/checkout@v4
+        with:
+          repository: boulingua/kit
+          ref: ${{ inputs.kit_ref }}
+          path: .kit
+
+      - name: Checkout curriculum
+        uses: actions/checkout@v4
+        with:
+          repository: boulingua/curriculum
+          ref: ${{ inputs.curriculum_ref }}
+          path: .curriculum
+
+      # go-version-file, always. A literal drifts from go.mod and the failure is
+      # not a red build — it is a module graph that resolves differently here
+      # than locally, which takes a day to find.
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+
+      - name: Set up Hugo
+        uses: peaceiris/actions-hugo@v3
+        with: { hugo-version: "0.159.2", extended: true }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      # No TeX Live, no LibreOffice, no Piper. Materials are committed and CI
+      # verifies them; it does not generate them (ADR-0009). A TeX point release
+      # must not silently reflow 360 documents between two deploys.
+      - name: Install Python deps
+        run: pip install --quiet pyyaml pypdf pymupdf 'fonttools[woff]'
+
+      - name: Install npm deps
+        run: '[[ -f package-lock.json ]] && npm ci --no-audit --no-fund || echo "no package-lock.json"'
+        shell: bash
+
+      - name: Build site
+        run: hugo --minify --gc --panicOnWarning --baseURL "${{ steps.pages.outputs.base_url || '' }}/"
+
+      # THE BATTERY. One step, one entry point, the same one used locally.
+      # Adding a gate here instead of to the battery breaks the equivalence and
+      # is caught by kit's own drift test.
+      - name: kit check
+        run: python .kit/bin/kit check . --ci
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with: { path: ./public }
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
