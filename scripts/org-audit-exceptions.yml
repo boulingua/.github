@@ -12,24 +12,10 @@ archived:
   - sheetgen
   - audiogen
 
-scheduled:
-  - repo: efl
-    file: .github/workflows/hugo.yml
-    reason: >-
-      Three suppressions, one of them the closest thing this repo has to a URL
-      drift check. All three go when efl adopts the twelve-line caller.
-    destination: P3.4
-  - repo: fle
-    file: .github/workflows/hugo.yml
-    reason: >-
-      The Quarto zombie: installs Quarto and TinyTeX on every push and renders
-      zero files against zero .qmd sources, surviving only on this suppression.
-      Deleted outright, not fixed.
-    destination: P3.3
-  - repo: ressources
-    file: .github/workflows/link-check.yml
-    reason: >-
-      Two lychee suppressions. External link rot is a real advisory signal and
-      a bad blocking one — a third party's outage is not this repo's defect —
-      so these move to the weekly advisory job rather than becoming blocking.
-    destination: S1 weekly advisory
+scheduled: []
+# Empty, and that is the goal state. Every entry that was here has been
+# cleared by the retrofit it named: efl and fle adopted the shared caller
+# at P3.4 and P3.3, taking their suppressions with it, and ressources'
+# lychee steps moved to the weekly advisory job. The audit fails on an
+# entry whose file no longer carries a suppression, so this list cannot
+# quietly outlive its reasons.

@@ -51,8 +51,8 @@ def load_exceptions(here: Path) -> dict:
 def main() -> int:
     org = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     exc = load_exceptions(Path(__file__).resolve().parent)
-    archived = set(exc.get("archived", []))
-    scheduled = {(x["repo"], x["file"]): x for x in exc.get("scheduled", [])}
+    archived = set((exc.get("archived") or []))
+    scheduled = {(x["repo"], x["file"]): x for x in (exc.get("scheduled") or [])}
     repos = sorted(p.parent for p in org.glob("*/.git") if p.is_dir())
     if not repos:
         repos = sorted(p.parent for p in org.glob("*/.git"))
@@ -96,7 +96,7 @@ def main() -> int:
     # anything — at which point it is no longer an exception, it is a line in a
     # file that says this org tolerates a suppression it has already removed.
     # So a stale entry fails, and clearing it is part of finishing the retrofit.
-    stale = [e for e in exc.get("scheduled", [])
+    stale = [e for e in (exc.get("scheduled") or [])
              if (e["repo"], e["file"]) not in used
              and e["repo"] not in archived
              and (org / e["repo"]).exists()]
