@@ -20,6 +20,7 @@ everywhere. A course whose caller has grown a step has left the battery.
 from __future__ import annotations
 
 import sys
+import re
 from pathlib import Path
 
 # Directories that belong to the kit and must not exist in a course.
@@ -32,6 +33,17 @@ def main() -> int:
     org = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     repos = sorted(p for p in org.iterdir() if p.is_dir() and not p.name.startswith("."))
     bad, checked, pre_adoption = 0, 0, []
+    # The kit's own newest tag, read from the checkout rather than from a
+    # constant — a hardcoded "current version" in a gate is stale by definition.
+    latest = None
+    kit_gates = org / "kit" / "gates.yml"
+    if (org / "kit").is_dir():
+        import subprocess
+        r = subprocess.run(["git", "tag", "-l", "v*.*.*"], cwd=org / "kit",
+                           capture_output=True, text=True)
+        vs = [tuple(int(x) for x in t[1:].split("."))
+              for t in r.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
+        latest = max(vs) if vs else None
     overrides: dict[str, dict] = {}
     for repo in repos:
         f = repo / "kit-overrides.yml"
@@ -40,6 +52,46 @@ def main() -> int:
             doc = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
             overrides[repo.name] = {e["path"]: e for e in doc.get("overrides", [])}
     for repo in repos:
+        # The MODULE VERSION check applies to every repo that imports the kit,
+        # not only to the ones whose layouts it owns. website and ressources are
+        # NOT_A_COURSE for the layouts rule and were skipped entirely — which is
+        # how website sat on v1.4.2 while ressources ran v1.7.0 with nothing
+        # reporting it.
+        cfgp = repo / "hugo.toml"
+        if cfgp.exists() and "boulingua/kit" in cfgp.read_text(encoding="utf-8"):
+            # The pinned MODULE version, which is a second kind of drift and the
+            # one the module itself was supposed to end. `v1` moves, but go.mod
+            # pins an exact version, so five courses adopting the kit over five
+            # days ended up rendering from five different releases — website on
+            # v1.4.2 while ressources was on v1.7.0. Nothing looked wrong: each
+            # site built cleanly against a kit that was internally consistent, just
+            # not the same one as its siblings.
+            #
+            # One minor behind is tolerated, because a course should not fail for
+            # being a day late. Two is drift.
+            gomod = repo / "go.mod"
+            if gomod.exists() and latest:
+                m = re.search(r"boulingua/kit v(\d+)\.(\d+)\.(\d+)",
+                              gomod.read_text(encoding="utf-8"))
+                if m:
+                    have = tuple(int(x) for x in m.groups())
+                    if have[0] != latest[0]:
+                        print(f"::error::{repo.name} pins kit v{'.'.join(map(str, have))} "
+                              f"against a current major of v{latest[0]} — a major means "
+                              f"the course has an edit to make, so this cannot be a "
+                              f"silent lag")
+                        bad += 1
+                    elif latest[1] - have[1] > 1:
+                        print(f"::error::{repo.name} pins kit v{'.'.join(map(str, have))}, "
+                              f"{latest[1] - have[1]} minors behind v{'.'.join(map(str, latest))}. "
+                              f"Courses rendering from different kit releases is the drift "
+                              f"the module exists to end.")
+                        bad += 1
+                    elif have != latest:
+                        print(f"::notice::{repo.name} pins kit "
+                              f"v{'.'.join(map(str, have))}, current is "
+                              f"v{'.'.join(map(str, latest))}")
+
         if repo.name in NOT_A_COURSE:
             continue
         # The discriminator is whether hugo.toml actually IMPORTS the kit, not
@@ -55,6 +107,7 @@ def main() -> int:
             pre_adoption.append(repo.name)
             continue
         checked += 1
+
         for d in KIT_OWNED:
             p = repo / d
             if not (p.exists() and any(p.rglob("*"))):
