@@ -26,6 +26,14 @@ on:
         description: "curriculum tag. A CI-time checkout, never vendored (ADR-0011)."
         type: string
         default: v1.1.0
+      org_ref:
+        description: >-
+          `.github` tag. Two gates — A1 and A16 — own scripts outside the kit, and
+          the register has to be told where each owner is rather than deriving it.
+          Defaults to the tag this workflow itself is called at, so the register
+          and the workflow are always the same revision.
+        type: string
+        default: v1
 
 # The floor. Each job narrows further; nothing here grants write.
 permissions:
@@ -61,6 +69,20 @@ jobs:
           repository: boulingua/curriculum
           ref: ${{ inputs.curriculum_ref }}
           path: .curriculum
+
+      # gates.yml names three owners, and A1's kit_drift.py lives in this one.
+      # Not checking it out is what stopped the battery between 2026-08-22 and
+      # 2026-08-30: the register derived the org root from the kit's parent,
+      # which is the checkout root locally and the COURSE root here, so it
+      # looked for kit_drift.py inside the course's own `.github/workflows`
+      # directory. The path must be `.github-org`; `.github` is already taken by
+      # the course's own caller, and that collision is the whole story.
+      - name: Checkout org .github
+        uses: actions/checkout@v4
+        with:
+          repository: boulingua/.github
+          ref: ${{ inputs.org_ref }}
+          path: .github-org
 
       # go-version-file, always. A literal drifts from go.mod and the failure is
       # not a red build — it is a module graph that resolves differently here
@@ -102,8 +124,15 @@ jobs:
       # THE BATTERY. One step, one entry point, the same one used locally.
       # Adding a gate here instead of to the battery breaks the equivalence and
       # is caught by kit's own drift test.
+      # The owner roots are STATED, never derived. The workflow is the only
+      # thing that knows where it put each checkout, so it is the only thing
+      # entitled to say — and `kit check` now refuses to guess, which is what
+      # turns a silently wrong path into a one-line failure.
       - name: kit check
-        run: python .kit/bin/kit check . --ci
+        run: |
+          python .kit/bin/kit check . --ci \
+            --owner-root .github=.github-org \
+            --owner-root curriculum=.curriculum
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
