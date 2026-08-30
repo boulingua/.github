@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Gate A1 — has a course grown code of its own?
 
-    python scripts/kit_drift.py ORG_CHECKOUT
+    python scripts/kit_drift.py REPO          # one course — the battery's shape
+    python scripts/kit_drift.py ORG_CHECKOUT  # every course — org-audit's shape
 
 The invariant: **a course repo contains content, marks, materials, brand and
 configuration. It contains no code.** The shared surface arrives as a Hugo
@@ -16,6 +17,19 @@ detect. A directory reappearing in a course is that failure restarting.
 Also checked: the caller is a constant. Everything configurable lives in
 `boulingua.yml`, so `.github/workflows/deploy.yml` should be byte-identical
 everywhere. A course whose caller has grown a step has left the battery.
+
+**This took one argument and it was the wrong one.** `kit check` hands every
+gate the repo under test; this script read it as an org checkout and iterated
+its subdirectories, so `content/`, `static/` and `data/` were the "repos", none
+of them imported the kit, and it printed *0 course(s) importing the kit module,
+checked · A1 OK*. Green, on every course, having examined nothing. The drift
+gate had the drift defect, and it was invisible for as long as the gate register
+was aborting before the battery ran at all.
+
+So: one repo is checked as one repo, an org checkout is still iterated, and
+**checking nothing is no longer a way to pass**. The kit is located from
+`$BLG_KIT` when `kit check` sets it — in CI the kit is at `.kit` inside the
+course, not beside it — and from a sibling otherwise.
 """
 from __future__ import annotations
 
@@ -29,17 +43,32 @@ KIT_OWNED = ["layouts", "assets", "i18n", "archetypes", "scripts", "_scripts"]
 NOT_A_COURSE = {"kit", "curriculum", ".github", "website", "ressources"}
 
 
+def is_repo(p: Path) -> bool:
+    """A repository, as opposed to an org checkout holding several. Recognised
+    by boulingua.yml or hugo.toml — the two files a course always has and a
+    checkout root never does."""
+    return (p / "boulingua.yml").exists() or (p / "hugo.toml").exists()
+
+
 def main() -> int:
-    org = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
-    repos = sorted(p for p in org.iterdir() if p.is_dir() and not p.name.startswith("."))
+    import os
+    target = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
+    single = is_repo(target)
+    org = target.parent if single else target
+    repos = [target] if single else sorted(
+        p for p in org.iterdir() if p.is_dir() and not p.name.startswith("."))
+    # In CI the kit is checked out INSIDE the course at .kit, so `org / "kit"`
+    # is a directory that does not exist and every fork comparison silently
+    # compares against an empty set.
+    kit_root = Path(os.environ["BLG_KIT"]).resolve() if os.environ.get("BLG_KIT") \
+        else org / "kit"
     bad, checked, pre_adoption = 0, 0, []
     # The kit's own newest tag, read from the checkout rather than from a
     # constant — a hardcoded "current version" in a gate is stale by definition.
     latest = None
-    kit_gates = org / "kit" / "gates.yml"
-    if (org / "kit").is_dir():
+    if kit_root.is_dir():
         import subprocess
-        r = subprocess.run(["git", "tag", "-l", "v*.*.*"], cwd=org / "kit",
+        r = subprocess.run(["git", "tag", "-l", "v*.*.*"], cwd=kit_root,
                            capture_output=True, text=True)
         vs = [tuple(int(x) for x in t[1:].split("."))
               for t in r.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
@@ -108,6 +137,36 @@ def main() -> int:
             continue
         checked += 1
 
+        # THE CALLER IS A CONSTANT. The docstring has claimed this since the
+        # reusable workflow landed and nothing enforced it. `kit check --ci` is
+        # the whole job body, so a caller that has grown a step has grown a gate
+        # nobody can run locally — which is how all nine of this org's
+        # continue-on-error suppressions started.
+        tmpl = kit_root / "templates" / "deploy.yml"
+        wfdir = repo / ".github" / "workflows"
+        if tmpl.exists() and wfdir.is_dir():
+            caller = wfdir / "deploy.yml"
+            if not caller.exists():
+                print(f"::error::{repo.name} has no .github/workflows/deploy.yml. "
+                      f"It calls the reusable workflow or it is not in the "
+                      f"battery; there is no third state.")
+                bad += 1
+            elif caller.read_bytes() != tmpl.read_bytes():
+                print(f"::error::{repo.name}/.github/workflows/deploy.yml differs "
+                      f"from kit/templates/deploy.yml. The caller is a constant so "
+                      f"that it is drift-gatable; an edit here moves a gate out of "
+                      f"`kit check`, where it can be run before pushing, and into "
+                      f"a file that can only be run by pushing.")
+                bad += 1
+            extra = sorted(q.name for q in wfdir.glob("*.y*ml")
+                           if q.name != "deploy.yml")
+            if extra:
+                print(f"::error::{repo.name} carries workflow(s) beside the "
+                      f"caller: {', '.join(extra)}. A course runs the battery and "
+                      f"nothing else — anything additional is CI a contributor "
+                      f"cannot reproduce.")
+                bad += len(extra)
+
         for d in KIT_OWNED:
             p = repo / d
             if not (p.exists() and any(p.rglob("*"))):
@@ -129,7 +188,7 @@ def main() -> int:
             # four letters. A fork is the same file at the same path; anything
             # else is a coincidence of naming, and list.html is about the most
             # likely name to collide by accident in a Hugo project.
-            kit_dir = org / "kit" / d
+            kit_dir = kit_root / d
             kit_names = ({q.relative_to(kit_dir).as_posix() for q in kit_dir.rglob("*")
                           if q.is_file()} if kit_dir.is_dir() else set())
             # A declared override is still a fork; declaring it buys time, not
@@ -152,9 +211,10 @@ def main() -> int:
                       f"what is not allowed is a copy of something the kit owns.")
     # Spent overrides. A declaration that outlives the file it covers is a
     # standing permission for a fork nobody has.
+    by_name = {r.name: r for r in repos}
     for name, entries in overrides.items():
         for path, e in entries.items():
-            if not (org / name / path).exists():
+            if not (by_name.get(name, org / name) / path).exists():
                 print(f"::error::{name}/kit-overrides.yml declares {path}, which "
                       f"does not exist. The override is spent — delete the entry. "
                       f"Its destination was {e.get('destination', '(none given)')}")
@@ -170,6 +230,26 @@ def main() -> int:
                       f"scheduled for {e['destination']}")
 
     print(f"  {checked} course(s) importing the kit module, checked")
+    # Checking nothing is not passing. In single-repo mode a zero here means
+    # the gate was pointed at something it does not understand, which is
+    # exactly how it ran green on all five courses.
+    if single and not checked and target.name not in NOT_A_COURSE \
+            and target.name not in pre_adoption:
+        print(f"::error::A1 examined no repository. {target} was given as a "
+              f"course but does not import the kit module and is not on the "
+              f"pre-adoption list — so nothing was compared and this is not a "
+              f"pass.", file=sys.stderr)
+        return 1
+    if single and not checked:
+        why = ("is not a course" if target.name in NOT_A_COURSE
+               else "has not adopted the kit module yet")
+        print(f"A1 n/a — {target.name} {why}.")
+        return 1 if bad else 0
+    if not single and not checked:
+        print(f"::error::A1 iterated {len(repos)} director(ies) under {org} and "
+              f"found no course importing the kit. That is not an org checkout.",
+              file=sys.stderr)
+        return 1
     if pre_adoption:
         print(f"::notice::{len(pre_adoption)} course(s) have not adopted the module "
               f"yet and were skipped: {', '.join(pre_adoption)}. They still hold "
