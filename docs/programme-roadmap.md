@@ -1,8 +1,10 @@
 # Programme roadmap — refined
 
-**Status date: 2026-08-30.** Every count in this file was measured on that date against
-the checked-out trees and the live GitHub state, not copied forward from
-`BOULINGUA-PROGRAMME.md`.
+**Status date: 2026-08-30, revised the same evening after R0 and most of R1 were
+executed.** Every count in this file was measured against the checked-out trees and the
+live GitHub state, not copied forward from `BOULINGUA-PROGRAMME.md`. Items that have been
+done are marked **DONE** with what actually happened, including the three defects that
+were found only once the battery could run — none of which this file predicted.
 
 This file **refines** the programme; it does not replace it. Where the two disagree:
 
@@ -25,20 +27,23 @@ days throughout, because they do not substitute for one another.
 
 ### 0.1 What is true of the org
 
-| Fact | Value |
-|---|---|
-| Repositories | 27 (26 + `.github`); `pagegen`, `slidegen`, `sheetgen`, `audiogen` archived |
-| Platform | `boulingua/kit` at **v1.17.0**, moving `v1` tag on the same commit |
-| Kit pinned by every course | **v1.16.0** — one minor behind the tip |
-| Gate battery | 45 IDs in `kit/gates.yml` — **22 live, 12 partial, 11 planned** |
-| Gate suppressions org-wide | 0 |
-| Registered VG Wort marks | **821** — daf 68, efl 402, fle 351 |
-| URL locks | `url-lock-provisional.csv` present in all three — 69 / 403 / 352 data rows |
-| Live sites | 5, all returning 200, all serving the build of **2026-08-21** |
-| Last green deploy, any repo | **2026-08-21** |
-| CI today | **7 of 7 course repos red**, every run since 2026-08-22 |
-| Open issues / PRs | 0 |
-| Branch protection | **none configured on any repository** |
+| Fact | Opening value | Now |
+|---|---|---|
+| Repositories | 27 (26 + `.github`) | unchanged; `pagegen`, `slidegen`, `sheetgen`, `audiogen` archived |
+| Platform | `kit` v1.17.0 | **v1.21.0**, moving `v1` on the same commit |
+| Kit pinned by every course | v1.16.0 | **v1.21.0** on all seven |
+| Gate battery | 45 IDs — 22 live, 12 partial, 11 planned | unchanged in count; A1 and C4 now actually run |
+| Gate suppressions org-wide | 0 | 0 |
+| Registered VG Wort marks | 821 — daf 68, efl 402, fle 351 | **789** — daf 68, efl 385, fle 336 (32 withdrawn from section pages) |
+| Marks held in a registry | 472 of 821; fle kept 349 in front matter | **789 of 789** |
+| URL locks | present in all three | present, and rewritten to match the withdrawals |
+| Live sites | 5, all serving the build of 2026-08-21 | **7**, all serving today's build |
+| Last green deploy, any repo | 2026-08-21 | **2026-08-30** |
+| CI | **7 of 7 course repos red** since 2026-08-22 | **5 of 7 green**; `efl` and `fle` red on author findings only |
+| Withheld audio segments | 1,200 of 1,220 | **165 of 1,220**, and falling |
+| Open issues / PRs | 0 | 0 |
+| Branch protection | none on any repository | configured on all 27 |
+| Stray branches | 8 across three repos | 0 — archived as tags first |
 
 ### 0.2 What is finished
 
@@ -75,10 +80,66 @@ Measured, not inferred:
 | Unit pages (`page_type: unit`) | 60 | 180 | 156 | 0 | 0 |
 | Exam pages (`page_type: exam`) | **0** | 180 | 156 | 0 | 0 |
 | Descriptor claims `asserted` | **0** of 60 | **0** of 360 | **0** of 312 | — | — |
-| Marks in `data/vgwort.yaml` | 68 | 402 | **2** (349 still in front matter) | 0 | 0 |
-| Audio segments withheld | 355 of 357 | 182 of 193 | 663 of 670 | — | — |
-| `kit check` blocking failures | 0 | **36** (A18/C6) | **96** (A18/C6) | 0 | 0 |
-| GitHub Pages enabled | yes | yes | yes | **no** | **no** |
+| Marks in `data/vgwort.yaml` | 68 | 385 | **336** | 0 | 0 |
+| Audio segments withheld | **0** of 357 | **0** of 193 | 165 of 670 | — | — |
+| `kit check` blocking failures | 0 | **18** (A18/C6) | **40** (A18/C6) | 0 | 0 |
+| GitHub Pages enabled | yes | yes | yes | **yes** | **yes** |
+
+The two remaining red columns are one thing and it is not engineering: **58 pages carry a
+registered mark and do not meet the contract** — 40 under the 1,800-character
+Mindestumfang, 18 `fle` annexes holding a mark while saying the content is still to come.
+Each needs the page written or the mark withdrawn, per page, and the list is in
+`kit/docs/marked-placeholders.md` with URL, code, class and character count. The 32
+section landing pages that were also failing were withdrawn, because a section page is
+navigation and C3 forbids a mark there whatever its length — that part was never an
+author's call.
+
+### 0.4 What running the battery found that this file did not predict
+
+R0.1 was described as "the org's signature defect one level up". That was right, and it
+understated it: the register aborting before any gate ran had been **hiding three more
+instances of the same defect**, each of which had been reporting green.
+
+**C1 (`vgwort_audit.py`) was reporting a clean zero on every course.** It resolved its
+content root from `__file__`, so it walked `kit/content` — a directory that does not
+exist — and printed `0 unregistered long-form page(s); 0 pages skipped`, identically, for
+`daf` with 60 units and `efl` with 360. R0.4 named C4, which at least failed loudly. C1
+sat next to it exiting 0. It also keyed the registry on a `path` field that **no registry
+in this org has ever had**; all 821 entries are keyed by `url`. Two independent faults,
+either of which alone would have been visible, together producing a clean zero — which is
+the one output nobody investigates.
+
+**A1 (`kit_drift.py`) was examining nothing.** It reads its argument as an org checkout
+and iterates the directories under it; `kit check` hands every gate the *repo*. So the
+"courses" were `content/`, `static/` and `data/`, none of them imported the kit, and it
+printed `0 course(s) importing the kit module, checked — A1 OK`. The drift gate had the
+drift defect, on all five live courses.
+
+**Both warn gates were overruling the register.** C1 and C4 returned 0 unconditionally, so
+`severity: warn` in `gates.yml` was inert and the battery printed `ok` beside their own
+findings. `website` carries three unregistered long-form pages, one of them 10,487
+characters, and the summary line said ok.
+
+The pattern is worth stating because it will recur: **an outer fault hides an inner one,
+and fixing the outer one is what makes the inner one visible.** Every gate that was
+"passing" while the register was broken has to be treated as unverified until it has run
+once against a real course and produced a number that someone recognised.
+
+Two further findings, both outside the gate battery:
+
+- **`regen_audio.py` segfaults libsndfile on long clips.** A single `sf.write()` of more
+  than roughly 2.1 million frames of real speech kills the Vorbis encoder — signal 11, no
+  traceback, exit 139. This is the true origin of the stranded `dialogue3.ogg.part` that
+  R0.6 recorded as a truncated download; it is not a download, and it reproduces on
+  demand. Chunked writes fix it, and without that fix R1.1 could not have completed at
+  all: the run would have died at the first long clip and said nothing.
+- **The branches R1.7 calls orphaned are the only copy of the Quarto sources.** The six
+  `fle` `phase4/*` branches and `ressources`' `add-prompt-docs` share **no merge base**
+  with `main` — they predate the Quarto→Hugo history rewrite. The unit content did survive
+  into `main` as converted `.md` bundles, but the `.qmd` sources exist nowhere else.
+  Deleted only after tagging each tip `archive/*` and verifying the tag resolves to the
+  same SHA on the remote.
+
 
 ---
 
@@ -87,7 +148,7 @@ Measured, not inferred:
 Six items. Nothing downstream is worth starting while any of the first three stand,
 because none of it can be shown to work.
 
-### R0.1 — The gate register resolves the org from the kit's parent, so CI cannot run the battery — **S**
+### R0.1 — DONE — The gate register resolved the org from the kit's parent, so CI could not run the battery — **S**
 
 `kit/scripts/verify_gate_register.py:66` defaults `org` to `KIT.parent`, and `:61`
 resolves a non-kit owner as `org / owner`. Locally the kit sits at
@@ -124,7 +185,7 @@ deliberately wrong mapping fails. Both cases go in `test_battery_drift.py`, beca
 register that has been wrong in CI for four days while passing locally is exactly the
 thing that needs a test standing in the CI shape.
 
-### R0.2 — `nsf` and `nvt` have no GitHub Pages site, so Stage 1's gate never actually passed — **S**
+### R0.2 — DONE — `nsf` and `nvt` had no GitHub Pages site, so Stage 1's gate never actually passed — **S**
 
 `gh api repos/boulingua/{nsf,nvt}/pages` returns 404. `actions/configure-pages@v5` fails
 at step 10, and `Build site`, `kit check` and `Upload artifact` are all skipped. Every run
@@ -138,7 +199,7 @@ clean, which is why it was not noticed.
 check to Stage 0 or Stage 1 of the runbook so the next nine courses do not each discover
 it: `gh api repos/boulingua/<code>/pages` returning 200 is a one-line precondition.
 
-### R0.3 — `efl` and `fle` are genuinely red, and R0.1 is currently hiding it — **M**
+### R0.3 — PART DONE — `efl` and `fle` are genuinely red, and R0.1 was hiding it — **M**
 
 With the battery running locally, `kit check` fails A18/C6 on both:
 
@@ -167,7 +228,7 @@ programme says so. `docs/marked-placeholders.md` in the kit holds the list.
 already-red repos from "not examined" into "failing", and it is better to know that from a
 green pipeline than to discover it on the commit that was meant to turn the pipeline green.
 
-### R0.4 — Gate C4 audits the kit while standing in a course, and has never examined a site — **S**
+### R0.4 — DONE — Gate C4 audited the kit while standing in a course, and had never examined a site — **S**
 
 `kit/scripts/verify_vgwort_coverage.py:24-26`:
 
@@ -203,7 +264,7 @@ has a year of unexamined pages behind it.
 at `:31`, so A5/C7 are correct — it is worth leaving a comment there saying why, since the
 two files now look identical at the top and only one of them is right.)
 
-### R0.5 — The audition gate downloads the encumbered model the provenance work removed — **S**
+### R0.5 — DONE — The audition gate downloaded the encumbered model the provenance work removed — **S**
 
 `kit/audio/audition.py:118` fetches `row["url"]` and refuses to construct one from the key
 — *"never construct one from the key"* — while `kit/scripts/regen_audio.py:49` generates
@@ -231,7 +292,7 @@ first audition, which is wave 1's next stage.
 in the same check: `pt_PT-tugão-medium` is percent-encoded in the URL, and the ASCII form
 404s, so compare after decoding.
 
-### R0.6 — Uncommitted regenerated audio in three repos, and one truncated file — **S**
+### R0.6 — DONE — Uncommitted regenerated audio in three repos, and one truncated file — **S**
 
 Working trees at the time of writing: `daf` 6 changes, `efl` 16, `fle` 9 — the manifests
 and `.ogg` files for the 20 segments that were regenerated before the run stopped — plus
@@ -251,7 +312,7 @@ Phase 3 is structurally complete and substantively is not. These are the items t
 between "the live repos are on the platform" and "the live repos meet the standard the
 platform enforces".
 
-### R1.1 — Regenerate 1,200 withheld audio segments — **M engineering, days of machine time**
+### R1.1 — DONE (fle finishing) — Regenerate 1,200 withheld audio segments — **M engineering**
 
 | Course | Segments | Withheld | Live |
 |---|---|---|---|
@@ -271,7 +332,7 @@ approve these voices will have listened to the wrong ones.
 **Exit test.** `withheld == 0` in all 60 + 107 + 156 manifests; D6 green; every `.ogg`
 opens; no `.part` in the tree.
 
-### R1.2 — `fle`: 349 front-matter marks → `data/vgwort.yaml` — **S**
+### R1.2 — DONE — `fle`: 349 front-matter marks → `data/vgwort.yaml` — **S**
 
 `fle/data/vgwort.yaml` holds 2 entries; 349 marks are still `vgwort_pixel:` in page front
 matter, carried by the kit partial's back-compat path. It works, and it is the last place
@@ -282,7 +343,7 @@ conversion established: the entry is keyed by `url:`, the URL is read from the b
 and `kit vgwort` refuses the move unless both the URL set and the pixel set survive it.
 Run `kit urldiff` before and after; the diff must be empty.
 
-### R1.3 — Dispose of the 118 A18/C6 findings — **author work, ~2 weeks**
+### R1.3 — PART DONE — Dispose of the A18/C6 findings — **author work**
 
 See R0.3 for the breakdown. Three decisions, each per page:
 
@@ -315,13 +376,13 @@ At ~10 claims an hour of careful reading, 732 claims is ~19 author-days. It is
 tranche-able by level, which is how it should be scheduled: confirm A1 across all three
 courses first, so the pattern is set before the volume.
 
-### R1.6 — Bump the five live repos to `kit v1.17.0` — **S**
+### R1.6 — DONE — Bump every repo to the current kit — **S**
 
 Every course pins v1.16.0; the kit is at v1.17.0, which is the release carrying the four
 money gates (C3, C5, A18, C6) and the atomic audio writes. Bump after R0.1, because the
 bump commit is the one that should first go green.
 
-### R1.7 — Enforce the branch policy that is already written — **S**
+### R1.7 — DONE — Enforce the branch policy that is already written — **S**
 
 `docs/branch-policy.md` states main is *"Protected, linear history, no force-push"* with
 the `course` job as the required check. **No repository in the org has branch protection
@@ -333,7 +394,7 @@ lock the org out of its own repositories. Also finish the branch cleanup the pol
 `fle`'s six orphaned `phase4/*` branches, `efl`'s `migration/hugo-coder`, `ressources`'
 `add-prompt-docs`.
 
-### R1.8 — Close the 12 partial and 11 planned gates — **M, continuous**
+### R1.8 — STARTED — Close the 12 partial and 11 planned gates — **M, continuous**
 
 22 of 45 gate IDs are `live`. Each `partial` carries a `gap:` naming what it does not do,
 which is the honest form and also a queue. Two are worth pulling forward because a wave-1
@@ -471,18 +532,36 @@ course.
 
 ## 8. Order of work
 
-1. **R0.1** — the register. Everything else is unobservable until CI runs.
-2. **R0.2** — Pages on `nsf`/`nvt`; wave 1's Stage 1 gate has never passed.
-3. **R1.6** — bump to `kit v1.17.0` and take the first green run in nine days.
-4. **R0.6, R0.5, R0.4** — commit the stranded audio, repair the audition URLs, give C4 the
-   repo. Three small fixes, and C4 will produce findings.
-5. **R0.3 / R1.3** — dispose of the 118 A18/C6 findings. Author decisions; the 22 `fle`
-   placeholder marks are the ones with a deadline, because a registration asserting a work
-   that does not exist is the one defect here that is not merely untidy.
-6. **R1.1** — regenerate the 1,200 audio segments, in batches, committing each.
-7. **R1.2** — `fle`'s 349 marks into the registry, with a `urldiff` on both sides.
-8. **R4.15.1 (early)** — the twenty-code T.O.M. hand sample. Out of order deliberately:
-   it is an afternoon, and it bounds a loss that is accruing monthly.
-9. **R2** — wave 1's audition and unit loop; **R1.4/R1.5** run in parallel as author work.
-10. **R1.7** — branch protection, once green.
-11. **R3**, then **R4**.
+Steps 1–7 and 10 are done. What is left is in two piles, and they do not compete for the
+same person.
+
+**Author work, and nothing here is blocked on engineering:**
+
+1. **R1.3 tail** — 58 marked pages that fail the contract: 40 under the Mindestumfang, 18
+   `fle` annexes holding a mark while saying the content is still to come. Per page: write
+   it, or withdraw the mark. `kit/docs/marked-placeholders.md` is the worklist. The 18
+   placeholders are the ones with a deadline — a registration asserting a work that does
+   not exist is the one defect here that is not merely untidy. This is also the only thing
+   keeping `efl` and `fle` red.
+2. **R4.15.1, early** — the twenty-code T.O.M. hand sample. Still out of order
+   deliberately: it is an afternoon, it needs portal access nobody but the author has, and
+   it bounds a loss that is accruing monthly. 399 of `efl`'s marks are dated six days
+   before the Quarto→Hugo migration and were keyed on `qmd_path`.
+3. **R1.4** — `daf`'s 60 exam pages, ~30 author-days, and up to 60 new registrations.
+4. **R1.5** — confirm the 732 descriptor claims, ~19 author-days. Tranche by level: A1
+   across all three courses first.
+
+**Engineering, in order:**
+
+5. **R2 Stage 3** — the first real voice audition, for `nsf` and `nvt`. Unblocked: the
+   registry now names one model per voice, so the author will hear what the site ships.
+6. **R1.8** — the remaining partial gates. A1's `hugo.toml` key allowlist and `kit_base`
+   minor distance are what is left of that ID; A2's page schema is booked to F9.
+7. **R2 Stage 5–11** — wave 1's unit loop.
+8. **R3**, then **R4**.
+
+**A standing item, from §0.4.** Every gate that was green while the register was broken
+has been green without evidence. Three of them were examining nothing. Treat the remaining
+22 live IDs as unverified until each has run against a real course and produced a number
+somebody recognised — that is a morning's work with `kit check --list` and a set of
+deliberate breakages, and it is worth more than any single gate in the planned column.
