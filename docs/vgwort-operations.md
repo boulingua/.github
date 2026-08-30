@@ -53,6 +53,56 @@ If a private code is committed: report it as a security advisory rather than an
 issue, because an issue is public and would republish it. The mark is retired
 and re-drawn.
 
+## Released codes
+
+Thirty-two marks were withdrawn on 2026-08-30 from `_index.md` section landing
+pages. A section page is a navigation surface, not the author's Sprachwerk: gate
+C3 fails a mark found on one from the rendered side and A18/C6 from the source,
+and this is the disposal that reconciles the repos with both.
+
+**These codes are not spent.** A withdrawn mark has never been claimed against a
+work, so each may be re-registered on a page that qualifies — over 1,800
+rendered characters, one work, one URL. They are listed so that happens instead
+of a fresh draw.
+
+The pages themselves are unchanged and still published. What they no longer do
+is carry a pixel.
+
+| course | URL | public code |
+|---|---|---|
+| `efl` | `/track-e/kl05/` | `00a66596a63a42f1beb56220bfd8d67a` |
+| `efl` | `/track-e/kl06/` | `0222dd1db3254a26801c796f9ea0644b` |
+| `efl` | `/track-e/kl07/` | `03eeb7fba1ae4497b51a4c1c9d52d94a` |
+| `efl` | `/track-e/kl08/` | `059d98000d514fee9edd2dae2a26c2a8` |
+| `efl` | `/track-e/kl09/` | `076ec137517948178f15bad235ef084f` |
+| `efl` | `/track-e/kl10/` | `08fb07458c0943d799d95537a9f13f42` |
+| `efl` | `/track-e/kl11/` | `0ad7c8fc2dde46aaacd8927bb0527e09` |
+| `efl` | `/track-e/kl12/` | `0c9ed18d52c648e589dda7289acd2c69` |
+| `efl` | `/track-e/kl13/` | `0e40eeac17cd41b3aa6afa478e303cc3` |
+| `efl` | `/track-gm/kl05/` | `1043529b55504b30b531a3f44f1f483f` |
+| `efl` | `/track-gm/kl06/` | `11f6978acfd3425db61ef13b4fd01ded` |
+| `efl` | `/track-gm/kl07/` | `13ef6e89272f4d7c95b1b3b8e8ee8534` |
+| `efl` | `/track-gm/kl08/` | `15e07ad41861429bb58f66ee88b751f9` |
+| `efl` | `/track-gm/kl09/` | `17a7d36f3cfb4effacf605e8acf14ec7` |
+| `efl` | `/track-gm/kl10/` | `1952725598d84ee09878d25ca51f1701` |
+| `efl` | `/about/` | `1bfa32f4f472497c9d00e33805d27b97` |
+| `efl` | `/about/courses/` | `1c1dd2ace2e54ab6aee391722b8897d1` |
+| `fle` | `/filiere-e/` | `1c920712b1ac4286bba3826a4c410537` |
+| `fle` | `/filiere-gm/` | `1ca3800adb624d47809df648bd176f6b` |
+| `fle` | `/track_e_kl06/` | `1bc684db552e471aac7223b955bb6d11` |
+| `fle` | `/track_e_kl07/` | `1d5ad4f111e2453aa8da00cf4da53d0e` |
+| `fle` | `/track_e_kl08/` | `1ef4d7f41e8848e3ad6ef10309cc1627` |
+| `fle` | `/track_e_kl09/` | `208c48dfb1604b9fb07d003188ad75c0` |
+| `fle` | `/track_e_kl10/` | `22785e759724430483fb09ae3909f5e9` |
+| `fle` | `/track_e_kl11/` | `23b158a72df54f0684c5b2380c43a8e9` |
+| `fle` | `/track_e_kl12/` | `258d4552a089402a956ec9e3a040a6d0` |
+| `fle` | `/track_e_kl13/` | `26fddee2be7b4ffba26dc95ea73c7714` |
+| `fle` | `/track_gm_kl06/` | `28b4d1dde71e4d269a4f381c8679b5d9` |
+| `fle` | `/track_gm_kl07/` | `2ac3fac658604d0bbc8c6cb181b632ca` |
+| `fle` | `/track_gm_kl08/` | `2c32ca894703496f94a3878cc3693c9f` |
+| `fle` | `/track_gm_kl09/` | `2d8b1da63eb649a596b3e957c4755318` |
+| `fle` | `/track_gm_kl10/` | `2f051bac8e144f4eb4a4ed63de6b70ad` |
+
 ## Never marked
 
 Navigation surfaces, the materials hub, tag and category indexes, paginated
