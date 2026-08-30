@@ -125,6 +125,41 @@ and fixing the outer one is what makes the inner one visible.** Every gate that 
 "passing" while the register was broken has to be treated as unverified until it has run
 once against a real course and produced a number that someone recognised.
 
+Acting on that immediately found two more:
+
+**A13 passed on 156 exams it did not examine.** `fle` has 156 exam pages and not one
+carries a total, task points or a grading scale, so the arithmetic gate had nothing to add
+up and printed `A13 OK — 0 exam(s)`. It emitted a warning saying the marking schemes exist
+only in the author's head, which is honest, and returned 0 anyway, which is not. Having no
+exam pages and having 156 with no marking scheme are different states; the first is still
+n/a and still passes, which is `daf` and is correct. Fixed; `fle` was already red.
+
+**A3 was failing silently.** `cmd_urldiff` read `run(...)[1] or _echo(...)`, where `[1]` is
+the return code — so a non-zero result short-circuited and nothing was printed. The
+blocking gate defending 789 registered marks against a moved URL exited 1 with no output,
+and on success ran the entire scan a second time in order to print it. Found by orphaning
+a mark deliberately: a `slug:` override on daf's glossary moves the page and leaves the
+registry pointing at an address that no longer exists. C2 caught it with a good message,
+so the loss was not total — but an operator staring at an empty failure has no reason to
+read C2's line.
+
+**Ten deliberate breakages were then run against the battery and all ten were caught**: a
+mark on a legal page (C3), a kit-owned file copied into a course (A1), an edited caller
+(A1), a `TODO` in a rendered legal page (C7), an orphaned mark (C2, A3), stale build
+output (C9/C10), a page over the floor with no mark (C4), a `piper_key`/`url` divergence
+(D6), the register in the CI shape (`test_battery_drift.py`), and A13's zero. Two of those
+were initially recorded as misses and were not: the test was aimed at the wrong gate of a
+pair. That is worth knowing too — **the division of labour between paired gates is not
+obvious from either one's docstring**, and a breakage test that names the wrong half reads
+exactly like a defect.
+
+One thing the breakage work established that is not a gate at all: **`hugo --gc` does not
+remove an orphaned output directory.** A gate read on its own after an incremental build
+can be answering about a page that no longer exists. The battery does catch it — C9/C10
+fails with `sitemap.xml omits a built page` — so the local-equals-CI contract holds, but
+`rm -rf public` before a local `kit check` is the difference between a real answer and a
+stale one.
+
 Two further findings, both outside the gate battery:
 
 - **`regen_audio.py` segfaults libsndfile on long clips.** A single `sf.write()` of more
