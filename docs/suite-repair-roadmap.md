@@ -11,7 +11,7 @@ Where either disagrees with an ADR on a decision, the ADR wins.
 
 ## What the audits actually found
 
-**145 verified defects. 37 blocking.** Ninety-six of them are in `kit`, which is the correct
+**165 verified defects. 40 blocking.** (145 from the first pass; 20 more from re-running two dimensions whose agents died mid-response.) Ninety-six of them are in `kit`, which is the correct
 place for them to be and the reason the platform exists: one repository absorbs what would
 otherwise be eighteen.
 
@@ -113,6 +113,74 @@ cd <course> && hugo config mounts | grep -A6 '"path": "github.com/boulingua/kit"
 # must print your working copy, never a path under ~/.cache/hugo_cache
 # to make it so:  printf '\nreplace github.com/boulingua/kit => ../kit\n' >> go.mod   (scratch only)
 ```
+
+---
+
+## Progress — 2026-08-31
+
+Landed and verified. Every item below was proved by a command, not by inspection.
+
+| | what | evidence |
+|---|---|---|
+| **S1** | 560 vocabulary clips re-synthesised from the spoken string | efl unit01 7.48 s / 0 pauses → 10.57 s / 4; daf's ten German terms 17.14 s → 49.08 s. All 560 carry a stored `tts` key, so the next regeneration is lossless |
+| **S1** | `build_audio.py` can no longer republish a clip | negative control with a piper stub failing on call 2: was two byte-identical `.ogg`s + exit 0; now `1 FAILED and were not published`, rc=1, no sidecar, no manifest entry |
+| **G1a** | **A20** — published file set | negative control: deleting `daf/layouts/materials/list.html` gives hugo exit 0 · `A3 OK` · qa_basics rc=0 · **A20 exit 1 naming all five dropped JS bundles** |
+| **G1b** | **A21** — template paths are not URLs | baseline 6 of 20 course-local templates section-coupled; `url_shape` and synonyms refused |
+| **G2** | A7 and A8 read the repo they are handed | A8 found 24 physical inline properties in four stylesheets it had never opened; **all 24 fixed**, A8 green on all seven repos |
+| **G3** | the battery names the 5 gates it silently dropped | A3, A16, B2, A20, E1 now print as `else` with where they claim to run |
+| **G3** | a `runs:` claim must be true of the file it names | caught A16 claiming a `course-build.yml` step that never existed |
+| **G3** | **A16 is a real gate** | `conformance_audit.py` takes a repo; resolves on daf, efl, fle, nsf, nvt |
+| **O** | branch protection required a context that can never report | required `course`; the workflow reports `course / build`. **No PR could ever have merged.** Corrected on all seven |
+| | released | `kit v1.22.0`, `v1` moved after all five course PRs merged, canaried green on nsf |
+
+**Merged:** website, ressources, daf, efl, fle. efl and fle were admin-merged with the
+bypass recorded on the PR — both were green on every gate except the two that were
+already red and that the PR does not touch, and the defect they fixed was live.
+
+### Still open, and honestly
+
+- **efl and fle remain red** on author findings only: efl A18/C6 (18 pages), fle A13
+  (156 exams with no marking scheme) and A18/C6 (40 pages).
+- **The completeness critic never ran.** It died twice — once on a session limit, once
+  on a hang — so the question *"what did sixteen specialists all miss?"* is unanswered.
+  The archived repos, git hygiene, cross-dimension interactions and the run-time
+  behaviour of the published sites are the named gaps.
+- **A7 is warn, not blocking**, until the harmonisation token binding lands.
+
+---
+
+## Recovered findings — the two dimensions whose agents died
+
+The first audit lost `scaffolds` and `ci-supply-chain` to API errors. Re-run: **20 more
+verified findings, 3 blocking.** Total for the programme: **165 verified, 40 blocking.**
+
+The scaffolds matter more than their five files each suggest — they are the next fifteen
+courses, and `kit new` is how each one starts.
+
+| | file | finding |
+|---|---|---|
+| BLO | `/home/rh/Documents/GitHub/boulingua/public/.github/scripts/org_audit.py:34` | org_audit.py's "no workflow writes to main" and "no gate suppression" rules are evaded by five one-token variants, and the third check its docstring claims is not implemented at all |
+| BLO | `/home/rh/Documents/GitHub/boulingua/public/kit/bin/kit:434` | `kit new` substitutes only `code` and `baseURL`: every course-identifying value stays at the template default, so a scaffolded course ships English chrome, the title "Course Template", and an archived-repo link on every page — and fails gate A4 on its first `kit check` |
+| BLO | `/home/rh/Documents/GitHub/boulingua/public/kit/design/fonts.yaml:75` | Nothing in the org validates a course's declared script tier: fonts.yaml's `courses:` lists, `must_render`, `chrome_language` and `target_language` are read by no code, gates A11 and C11 are `status: planned` with `scripts: []`, and fonts.yaml itself assigns Polish and Turkish to a tier that contains none of their letters |
+| BLO | `/home/rh/Documents/GitHub/boulingua/public/kit/audio/voices.yml` | Nine of thirteen scaffolds carry a `piper_key` with no `provenance` field: `regen_audio.py` refuses to synthesise for every one of them, while gate D6 passes them all and the register's own note claims D6 refuses exactly this |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/.github/.github/workflows/course-build.yml:109` | `npm ci` failure is swallowed in the shared build — a lockfile integrity or sync failure prints "no package-lock.json" and the step exits 0 |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/.github/.github/workflows/course-build.yml:95` | Not one of the 19 `uses:` refs in the org is SHA-pinned; two third-party actions on moving majors run in the job that builds the Pages artifact, with `allowed_actions: all` and no Dependabot |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/kit/scripts/verify_voices.py:195` | `verify_voices.py` prints only the first 8 of its notices with no "N more" line, silently dropping the provenance warnings for ple, rki and ufl |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/afl/ROADMAP.md:162` | Fourteen of fifteen repos ship a superseded, wrong-coloured brand mark that no gate examines, and all fifteen READMEs and ROADMAPs quote the pre-re-derivation accent — including a §3 instruction to "confirm" a hex that accents.yaml no longer holds |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/afl/README.md:39` | All fifteen READMEs publish the content licence as CC BY 4.0, contradicting ADR-0004, their own ROADMAPs, `kit new`'s default and the CC BY-SA 4.0 that nsf's deployed pages actually render |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/lle/README.md:29` | All fifteen READMEs promise native-voice audio "generated with the shared audiogen workflow", pointing at an archived repo — and ADR-0013 asserts as settled fact that lle's README carries a conditional promise instead |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/lle/ROADMAP.md:78` | lle's §4 conformance declaration targets machinery that does not exist: no `classical-reception` profile ships, `core-restricted` resolves to the identical 206-cell denominator as `core`, and the resolver never reads `profile:` at all |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/afl/ROADMAP.md:314` | Three ROADMAPs name retired pagegen scripts as their VG Wort CI gates — the same two scripts ADR-0001 and ADR-0002 identify as the vacuous gates that were removed |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/kit/bin/kit:561` | `kit materials sync`, the instantiation step 2 in all fifteen ROADMAPs, is not a command — it crashes with an unhandled FileNotFoundError |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/afl/ROADMAP.md:82` | afl and pfa specify Arabic web fonts that kit/design/fonts.yaml explicitly rejects, and one of the four faces they name has no row in the manifest at all |
+| MAJ | `/home/rh/Documents/GitHub/boulingua/public/pfl/ROADMAP.md:220` | Four ROADMAPs specify the pre-ADR-0014 unit body — "Objectives … Produce" — where the canonical step keys are activate/input/practise/apply/reflect and `apply` was deliberately renamed away from `produce` |
+
+The three blocking ones are all about the fifteen courses that have not started yet:
+`kit new` substitutes only `code` and `baseURL`, so every other course-identifying value
+stays at the template default; nothing validates a declared script tier against
+`fonts.yaml`; and nine of thirteen scaffolds carry a `piper_key` with no `provenance`
+field, which `regen_audio.py` refuses outright. Wave 2 would have hit all three on day one.
+
 
 ---
 
