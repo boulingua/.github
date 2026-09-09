@@ -1,0 +1,20 @@
+# Who the VG Wort Zählmarken in this organisation belong to.
+#
+# A Zählmarke is registered to a person, not to a repository. This file is the
+# single declaration of who that person is, so that a registry entry naming
+# anybody else fails the org audit instead of being noticed by nobody.
+#
+# in_scope limits the check while the other courses have no marks at all.
+# Remove a name from the list only when that course genuinely stops holding
+# marks; leaving a course out is how an unchecked registry starts.
+holder: S. Le Boulanger
+
+# Spellings of the same person that are acceptable in a registry entry. Keep
+# this short: every alias is a way for a real mismatch to look like a variant.
+also_accepted:
+  - Sophie Le Boulanger
+
+in_scope:
+  - efl
+  - fle
+  - daf

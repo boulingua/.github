@@ -24,3 +24,9 @@ jobs:
         env: { GH_TOKEN: "${{ github.token }}" }
       - name: Audit
         run: python scripts/org_audit.py org
+      # Getrennter Schritt, damit ein Markenbefund nicht in den
+      # Workflow-Befunden untergeht - und damit beide laufen, auch wenn der
+      # erste faellt.
+      - name: VG Wort mark holder
+        if: always()
+        run: python scripts/vgwort_holder.py org
