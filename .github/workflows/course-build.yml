@@ -19,13 +19,13 @@ on:
   workflow_call:
     inputs:
       kit_ref:
-        description: "kit tag to check out. Courses pin a major and move deliberately."
+        description: "Optional kit override. By default use the version pinned in course go.mod."
         type: string
-        default: v1
+        default: ""
       curriculum_ref:
         description: "curriculum tag. A CI-time checkout, never vendored (ADR-0011)."
         type: string
-        default: v1.1.0
+        default: ""
       org_ref:
         description: >-
           `.github` tag. Two gates — A1 and A16 — own scripts outside the kit, and
@@ -54,20 +54,47 @@ jobs:
         uses: actions/checkout@v4
         with: { submodules: recursive, fetch-depth: 0 }
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: Resolve the course release pins
+        id: refs
+        env:
+          KIT_OVERRIDE: ${{ inputs.kit_ref }}
+          CURRICULUM_OVERRIDE: ${{ inputs.curriculum_ref }}
+        run: |
+          python - <<'PYCODE'
+          import os, pathlib, re
+          module = pathlib.Path('go.mod').read_text()
+          match = re.search(r'github.com/boulingua/kit\s+(v[^\s]+)', module)
+          if not match:
+              raise SystemExit('go.mod must pin github.com/boulingua/kit')
+          kit = os.environ['KIT_OVERRIDE'] or match[1]
+          manifest = pathlib.Path('curriculum.yml')
+          version = re.search(r'(?m)^framework_version:\s*["\']?([0-9]+\.[0-9]+\.[0-9]+)', manifest.read_text()) if manifest.exists() else None
+          curriculum = os.environ['CURRICULUM_OVERRIDE'] or ('v'+version[1] if version else 'v1.2.0')
+          for ref in [kit, curriculum]:
+              if not re.fullmatch(r'[A-Za-z0-9/._-]+', ref):
+                  raise SystemExit('Invalid dependency ref')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write(f'kit={kit}\ncurriculum={curriculum}\n')
+          PYCODE
+
       # kit and curriculum arrive as checkouts at a pinned tag. Never vendored,
       # never a submodule: a course repo contains content, not code.
       - name: Checkout kit
         uses: actions/checkout@v4
         with:
           repository: boulingua/kit
-          ref: ${{ inputs.kit_ref }}
+          ref: ${{ steps.refs.outputs.kit }}
           path: .kit
 
       - name: Checkout curriculum
         uses: actions/checkout@v4
         with:
           repository: boulingua/curriculum
-          ref: ${{ inputs.curriculum_ref }}
+          ref: ${{ steps.refs.outputs.curriculum }}
           path: .curriculum
 
       # gates.yml names three owners, and A1's kit_drift.py lives in this one.
@@ -95,18 +122,33 @@ jobs:
         uses: peaceiris/actions-hugo@v3
         with: { hugo-version: "0.159.2", extended: true }
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
 
       # No TeX Live, no LibreOffice, no Piper. Materials are committed and CI
       # verifies them; it does not generate them (ADR-0009). A TeX point release
       # must not silently reflow 360 documents between two deploys.
       - name: Install Python deps
-        run: pip install --quiet pyyaml pypdf pymupdf 'fonttools[woff]'
+        run: pip install --requirement .kit/requirements.txt
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with: { node-version: "22" }
+
+      - name: Install shared build tools
+        run: npm ci --prefix .kit --no-audit --no-fund
+
+      - name: Install browser for accessibility and interaction checks
+        run: npm exec --prefix .kit -- playwright install --with-deps chromium
 
       - name: Install npm deps
-        run: '[[ -f package-lock.json ]] && npm ci --no-audit --no-fund || echo "no package-lock.json"'
+        run: |
+          if [[ -f package-lock.json ]]; then
+            npm ci --no-audit --no-fund
+          elif [[ -f package.json ]]; then
+            echo "package.json exists without a dependency lock" >&2
+            exit 1
+          else
+            echo "No course-specific npm dependencies"
+          fi
         shell: bash
 
       # Setup Pages MUST precede the build: it is what resolves base_url, and
@@ -118,8 +160,13 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
 
+      - name: Use the checked kit for both rendering and checks
+        run: |
+          printf 'go 1.26.1\nuse ./.kit\n' > .hugo.work
+          echo "HUGO_MODULE_WORKSPACE=$GITHUB_WORKSPACE/.hugo.work" >> "$GITHUB_ENV"
+
       - name: Build site
-        run: hugo --minify --gc --panicOnWarning --baseURL "${{ steps.pages.outputs.base_url }}/"
+        run: python .kit/bin/kit build . --base-url "${{ steps.pages.outputs.base_url }}/"
 
       # THE BATTERY. One step, one entry point, the same one used locally.
       # Adding a gate here instead of to the battery breaks the equivalence and

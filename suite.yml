@@ -1,0 +1,123 @@
+# Repository roles determine which integration contracts apply.
+version: 1
+repositories:
+  ".github":
+    kind: organisation
+    visibility: public
+    archived: false
+  "afl":
+    kind: course
+    visibility: public
+    archived: false
+  "audiogen":
+    kind: archived-tool
+    visibility: public
+    archived: true
+  "cfl":
+    kind: course
+    visibility: public
+    archived: false
+  "curriculum":
+    kind: framework
+    visibility: public
+    archived: false
+  "daf":
+    kind: course
+    visibility: public
+    archived: false
+  "efl":
+    kind: course
+    visibility: public
+    archived: false
+  "ele":
+    kind: course
+    visibility: public
+    archived: false
+  "fle":
+    kind: course
+    visibility: public
+    archived: false
+  "gfl":
+    kind: course
+    visibility: public
+    archived: false
+  "ils":
+    kind: course
+    visibility: public
+    archived: false
+  "jfl":
+    kind: course
+    visibility: public
+    archived: false
+  "kit":
+    kind: platform
+    visibility: public
+    archived: false
+  "lle":
+    kind: course
+    visibility: public
+    archived: false
+  "nsf":
+    kind: course
+    visibility: public
+    archived: false
+  "nvt":
+    kind: course
+    visibility: public
+    archived: false
+  "pagegen":
+    kind: archived-tool
+    visibility: public
+    archived: true
+  "pfa":
+    kind: course
+    visibility: public
+    archived: false
+  "pfl":
+    kind: course
+    visibility: public
+    archived: false
+  "ple":
+    kind: course
+    visibility: public
+    archived: false
+  "ressources":
+    kind: catalogue
+    visibility: public
+    archived: false
+  "rki":
+    kind: course
+    visibility: public
+    archived: false
+  "scriptbridge":
+    kind: browser-extension
+    visibility: public
+    archived: false
+  "scriptlibrary":
+    kind: reading-library
+    visibility: public
+    archived: false
+    workflow: .github/workflows/pages.yml
+    shared_overrides:
+      - path: layouts/home.html
+        reason: Book catalogue replaces the generic course landing page.
+  "sheetgen":
+    kind: archived-tool
+    visibility: public
+    archived: true
+  "slidegen":
+    kind: archived-tool
+    visibility: public
+    archived: true
+  "tfl":
+    kind: course
+    visibility: public
+    archived: false
+  "ufl":
+    kind: course
+    visibility: public
+    archived: false
+  "website":
+    kind: hub
+    visibility: public
+    archived: false

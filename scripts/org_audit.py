@@ -1,124 +1,99 @@
 #!/usr/bin/env python3
-"""Org audit — the rules that only make sense across all 27 repos at once.
+"""Audit workflow permissions and failure propagation across an org checkout.
 
-    python scripts/org_audit.py ORG_CHECKOUT
-
-Three checks, each of which caught something real:
-
-**1. No workflow writes to main.** `fle` carried a workflow_dispatch job with
-`contents: write` that ran the retired placeholder generator and pushed to
-main — one dispatch would have overwritten 156 committed branded worksheet PDFs
-and pushed the result. It was deleted, but deleting one instance leaves the
-class open. This closes it: `contents: write`, `git push`, and the two common
-auto-commit actions are all a failure anywhere in the org.
-
-**2. No gate suppression.** Nine `continue-on-error` / `|| true` suppressions
-existed across four repos, and three sat on the revenue path — including the
-closest thing `efl` had to a URL-drift check. The ban is only credible if it
-names what it bans, so the rule is precise: `continue-on-error:` at step level
-is forbidden outright; `|| true` is forbidden only on a line whose command is a
-gate. `[[ -f package-lock.json ]] && npm ci || true` and
-`kill "$(cat /tmp/server.pid)" || true` are shell idioms inside a step, not
-suppressions, and the rule must not flag them or it will be switched off.
-
-**3. One caller, byte-identical.** Everything configurable is in boulingua.yml,
-so the caller is a constant — and a constant is checkable. A course that has
-grown its own gate step has left the battery.
+The course caller/module contract is enforced by kit_drift.py; this command
+runs that check too. YAML values are parsed so quoting cannot bypass a rule.
 """
-from __future__ import annotations
-
-import re
-import sys
 from pathlib import Path
+import re
+import shlex
+import subprocess
+import sys
+import yaml
 
-WRITE_SMELLS = [
-    (re.compile(r"contents:\s*write"), "grants contents: write"),
-    (re.compile(r"git\s+push"), "pushes from CI"),
-    (re.compile(r"peter-evans/create-pull-request"), "opens PRs from CI"),
-    (re.compile(r"stefanzweifel/git-auto-commit-action"), "auto-commits from CI"),
-]
-GATE_CMD = re.compile(r"verify_|check_|audit|pa11y|lychee|conformance_|kit check")
-CONTINUE_ON_ERROR = re.compile(r"^\s*continue-on-error:\s*true")
-OR_TRUE = re.compile(r"\|\|\s*true")
-
-
-def load_exceptions(here: Path) -> dict:
-    import yaml
-    f = here / "org-audit-exceptions.yml"
-    return yaml.safe_load(f.read_text(encoding="utf-8")) if f.exists() else {}
+GATE_CMD = re.compile(r'\b(?:verify_\w*|check_\w*|\w*audit\w*|pa11y|lychee|conformance_\w*|npm\s+(?:ci|test)|kit\s+check)\b')
+MASK_FAILURE = re.compile(r'\|\|\s*(?:true\b|:\s*(?:$|;)|echo\b|exit\s+0\b)')
+WRITERS = {'peter-evans/create-pull-request', 'stefanzweifel/git-auto-commit-action', 'endbug/add-and-commit', 'ad-m/github-push-action'}
 
 
-def main() -> int:
-    org = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
-    exc = load_exceptions(Path(__file__).resolve().parent)
-    archived = set((exc.get("archived") or []))
-    scheduled = {(x["repo"], x["file"]): x for x in (exc.get("scheduled") or [])}
-    repos = sorted(p.parent for p in org.glob("*/.git") if p.is_dir())
+def inspect_workflow(document):
+    findings = []
+
+    def walk(value, location='workflow'):
+        if isinstance(value, dict):
+            permission = value.get('permissions')
+            if permission == 'write-all' or (isinstance(permission, dict) and permission.get('contents') not in (None, 'read', 'none')):
+                findings.append((location, 'workflow grants contents write access', False))
+            if 'continue-on-error' in value and str(value['continue-on-error']).lower() != 'false':
+                findings.append((location, 'continue-on-error can suppress failure', True))
+            action = str(value.get('uses', '')).split('@')[0].lower()
+            if action in WRITERS:
+                findings.append((location, f'automatic repository writer: {action}', False))
+            script = value.get('run')
+            if isinstance(script, str):
+                for line in script.replace('\\\n', ' ').splitlines():
+                    if line.lstrip().startswith('#'):
+                        continue
+                    try:
+                        tokens = shlex.split(line, comments=True)
+                    except ValueError:
+                        tokens = line.split()
+                    if 'git' in tokens and 'push' in tokens[tokens.index('git') + 1:]:
+                        findings.append((location, 'workflow pushes Git changes', False))
+                    if GATE_CMD.search(line) and MASK_FAILURE.search(line):
+                        findings.append((location, 'required command failure is masked: ' + line.strip(), True))
+                    if re.search(r'\bset\s+\+e\b', line) and GATE_CMD.search(script):
+                        findings.append((location, 'failure propagation disabled around a required command', True))
+            for key, child in value.items():
+                walk(child, f'{location}.{key}')
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                walk(child, f'{location}[{index}]')
+    walk(document)
+    return findings
+
+
+def main():
+    org = Path(sys.argv[1] if len(sys.argv) > 1 else '.').resolve()
+    here = Path(__file__).resolve().parent
+    exceptions = yaml.safe_load((here / 'org-audit-exceptions.yml').read_text()) or {}
+    archived = set(exceptions.get('archived', []))
+    scheduled = {(x['repo'], x['file']): x for x in exceptions.get('scheduled', [])}
+    repos = sorted(p.parent for p in org.glob('*/.git'))
     if not repos:
-        repos = sorted(p.parent for p in org.glob("*/.git"))
-    bad, scanned = 0, 0
-    used: set[tuple[str, str]] = set()
-
-    deferred = 0
-    for repo in repos:
-        if repo.name in archived:
-            continue          # read-only; the code lives on inside kit
-        for wf in sorted((repo / ".github" / "workflows").glob("*.yml")):
-            scanned += 1
-            rel = f"{repo.name}/{wf.relative_to(repo)}"
-            sched = scheduled.get((repo.name, str(wf.relative_to(repo))))
-            for i, line in enumerate(wf.read_text(encoding="utf-8").split("\n"), 1):
-                if line.lstrip().startswith("#"):
-                    continue
-                for pat, why in WRITE_SMELLS:
-                    if pat.search(line):
-                        print(f"::error::{rel}:{i} {why} — no workflow in this org "
-                              f"writes to main. One dispatch of the workflow this "
-                              f"rule exists for would have overwritten 156 branded "
-                              f"PDFs.")
-                        bad += 1
-                sup = (CONTINUE_ON_ERROR.search(line)
-                       or (OR_TRUE.search(line) and GATE_CMD.search(line)))
-                if sup:
-                    if sched:
-                        used.add((sched["repo"], sched["file"]))
-                        print(f"::warning::{rel}:{i} gate suppression — known, "
-                              f"scheduled for {sched['destination']}")
-                        deferred += 1
-                    else:
-                        print(f"::error::{rel}:{i} gate suppression — a gate is "
-                              f"either blocking or written to warn, never "
-                              f"suppressed: {line.strip()[:60]}")
-                        bad += 1
-
-    # An exception outlives its reason silently. These six are scheduled for
-    # P3.2 through P3.4, and when a retrofit lands the entry stops matching
-    # anything — at which point it is no longer an exception, it is a line in a
-    # file that says this org tolerates a suppression it has already removed.
-    # So a stale entry fails, and clearing it is part of finishing the retrofit.
-    stale = [e for e in (exc.get("scheduled") or [])
-             if (e["repo"], e["file"]) not in used
-             and e["repo"] not in archived
-             and (org / e["repo"]).exists()]
-    for e in stale:
-        print(f"::error::org-audit-exceptions.yml: {e['repo']}/{e['file']} carries "
-              f"no suppression any more — the exception is spent. Delete the entry; "
-              f"its destination was {e['destination']}")
-        bad += 1
-
-    print(f"  {len(repos) - len(archived)} live repo(s), {scanned} workflow file(s) "
-          f"scanned; {len(archived)} archived skipped")
-    if deferred:
-        print(f"  {deferred} known suppression(s) deferred to a named phase — "
-              f"warned, not failed. Each carries a reason and a destination in "
-              f"org-audit-exceptions.yml; an exception with neither is how a "
-              f"permanent suppression starts.")
-    if bad:
-        print(f"\norg-audit FAIL — {bad} finding(s)", file=sys.stderr)
+        print('::error::no repositories found; the audit examined nothing')
         return 1
-    print("org-audit OK")
-    return 0
+    bad, scanned, used = 0, 0, set()
+    active = [p for p in repos if p.name not in archived]
+    for repo in active:
+        workflow_dir = repo / '.github/workflows'
+        for path in sorted(set(workflow_dir.glob('*.yml')) | set(workflow_dir.glob('*.yaml'))):
+            scanned += 1
+            relative = path.relative_to(repo).as_posix()
+            key = (repo.name, relative)
+            try:
+                document = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+                if not isinstance(document, dict):
+                    raise ValueError('workflow must be a mapping')
+                findings = inspect_workflow(document)
+            except (ValueError, yaml.YAMLError) as exc:
+                findings = [('workflow', f'invalid YAML: {exc}', False)]
+            for location, reason, suppression in findings:
+                exception = scheduled.get(key) if suppression else None
+                if exception and all(str(exception.get(k, '')).strip() for k in ['reason', 'destination']):
+                    used.add(key)
+                    print(f'::warning::{repo.name}/{relative}:{location}: {reason}; scheduled for {exception["destination"]}')
+                else:
+                    bad += 1
+                    print(f'::error::{repo.name}/{relative}:{location}: {reason}')
+    for key, entry in scheduled.items():
+        if key not in used and (org / key[0]).exists() and key[0] not in archived:
+            bad += 1
+            print(f'::error::unused or invalid exception: {key[0]}/{key[1]}')
+    print(f'Workflow audit: {len(active)} active repositories, {scanned} workflows, {bad} findings')
+    drift = subprocess.run([sys.executable, str(here / 'kit_drift.py'), str(org)])
+    return int(bool(bad or drift.returncode))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())

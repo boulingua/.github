@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import sys
 import re
+import yaml
 from pathlib import Path
 
 # Directories that belong to the kit and must not exist in a course.
@@ -50,6 +51,35 @@ def is_repo(p: Path) -> bool:
     return (p / "boulingua.yml").exists() or (p / "hugo.toml").exists()
 
 
+def workflow_errors(repo, template, product):
+    workflow_dir = repo / '.github/workflows'
+    if product:
+        filename = product.get('workflow')
+        if not filename or not (repo / filename).is_file():
+            return [f'{repo.name}: declared product workflow is missing']
+        try:
+            document = yaml.load((repo / filename).read_text(), Loader=yaml.BaseLoader)
+            commands = [str(step.get('run', '')) for job in document.get('jobs', {}).values()
+                        for step in job.get('steps', [])]
+            required = ['npm test', 'scripts/verify.py', '--panicOnWarning', 'scripts/check_links.py']
+            return [f'{repo.name}: product workflow does not run {command}'
+                    for command in required if not any(command in line for line in commands)]
+        except (yaml.YAMLError, AttributeError, TypeError) as exc:
+            return [f'{repo.name}: invalid product workflow: {exc}']
+    if not template.is_file():
+        return ['kit/templates/deploy.yml is missing; caller cannot be checked']
+    caller = workflow_dir / 'deploy.yml'
+    errors = []
+    if not caller.is_file():
+        errors.append(f'{repo.name}: .github/workflows/deploy.yml is missing')
+    elif caller.read_bytes() != template.read_bytes():
+        errors.append(f'{repo.name}: course caller differs from kit/templates/deploy.yml')
+    errors += [f'{repo.name}: extra workflow outside the course contract: {f.name}'
+               for f in sorted(set(workflow_dir.glob('*.yml')) | set(workflow_dir.glob('*.yaml')))
+               if f.name != 'deploy.yml']
+    return errors
+
+
 def main() -> int:
     import os
     target = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
@@ -63,6 +93,12 @@ def main() -> int:
     kit_root = Path(os.environ["BLG_KIT"]).resolve() if os.environ.get("BLG_KIT") \
         else org / "kit"
     bad, checked, pre_adoption = 0, 0, []
+    if not (kit_root / 'gates.yml').is_file():
+        print(f'::error::{kit_root}: no kit checkout; shared files cannot be compared')
+        return 1
+    registry_path = Path(__file__).resolve().parents[1] / 'suite.yml'
+    registry = (yaml.safe_load(registry_path.read_text()) or {}).get('repositories', {}) if registry_path.is_file() else {}
+
     # The kit's own newest tag, read from the checkout rather than from a
     # constant — a hardcoded "current version" in a gate is stale by definition.
     latest = None
@@ -77,7 +113,6 @@ def main() -> int:
     for repo in repos:
         f = repo / "kit-overrides.yml"
         if f.exists():
-            import yaml
             doc = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
             overrides[repo.name] = {e["path"]: e for e in doc.get("overrides", [])}
     for repo in repos:
@@ -136,36 +171,23 @@ def main() -> int:
             pre_adoption.append(repo.name)
             continue
         checked += 1
+        specification = registry.get(repo.name, {})
+        product = specification if specification.get('kind') == 'reading-library' else None
+        product_overrides = {x['path']: x for x in (product or {}).get('shared_overrides', [])}
+        for path, entry in product_overrides.items():
+            if not entry.get('reason') or not (repo / path).is_file() or not (kit_root / path).is_file():
+                print(f'::error::{repo.name}: invalid or obsolete product override {path}')
+                bad += 1
 
         # THE CALLER IS A CONSTANT. The docstring has claimed this since the
         # reusable workflow landed and nothing enforced it. `kit check --ci` is
         # the whole job body, so a caller that has grown a step has grown a gate
         # nobody can run locally — which is how all nine of this org's
         # continue-on-error suppressions started.
-        tmpl = kit_root / "templates" / "deploy.yml"
-        wfdir = repo / ".github" / "workflows"
-        if tmpl.exists() and wfdir.is_dir():
-            caller = wfdir / "deploy.yml"
-            if not caller.exists():
-                print(f"::error::{repo.name} has no .github/workflows/deploy.yml. "
-                      f"It calls the reusable workflow or it is not in the "
-                      f"battery; there is no third state.")
-                bad += 1
-            elif caller.read_bytes() != tmpl.read_bytes():
-                print(f"::error::{repo.name}/.github/workflows/deploy.yml differs "
-                      f"from kit/templates/deploy.yml. The caller is a constant so "
-                      f"that it is drift-gatable; an edit here moves a gate out of "
-                      f"`kit check`, where it can be run before pushing, and into "
-                      f"a file that can only be run by pushing.")
-                bad += 1
-            extra = sorted(q.name for q in wfdir.glob("*.y*ml")
-                           if q.name != "deploy.yml")
-            if extra:
-                print(f"::error::{repo.name} carries workflow(s) beside the "
-                      f"caller: {', '.join(extra)}. A course runs the battery and "
-                      f"nothing else — anything additional is CI a contributor "
-                      f"cannot reproduce.")
-                bad += len(extra)
+        errors = workflow_errors(repo, kit_root / 'templates/deploy.yml', product)
+        for error in errors:
+            print(f'::error::{error}')
+        bad += len(errors)
 
         for d in KIT_OWNED:
             p = repo / d
@@ -197,7 +219,8 @@ def main() -> int:
             # contract as org-audit-exceptions.yml and placeholder-exceptions.yml.
             forks = sorted(q for q in p.rglob("*")
                            if q.is_file() and q.relative_to(p).as_posix() in kit_names
-                           and q.relative_to(repo).as_posix() not in overrides.get(repo.name, {}))
+                           and q.relative_to(repo).as_posix() not in overrides.get(repo.name, {})
+                           and q.relative_to(repo).as_posix() not in product_overrides)
             own = [q for q in p.rglob("*")
                    if q.is_file() and q.relative_to(p).as_posix() not in kit_names]
             for q in forks:
@@ -229,7 +252,7 @@ def main() -> int:
                 print(f"::warning::{name}/{path} is a declared fork of a kit file, "
                       f"scheduled for {e['destination']}")
 
-    print(f"  {checked} course(s) importing the kit module, checked")
+    print(f"  {checked} course/product consumer(s) importing the kit module, checked")
     # Checking nothing is not passing. In single-repo mode a zero here means
     # the gate was pointed at something it does not understand, which is
     # exactly how it ran green on all five courses.
@@ -257,7 +280,7 @@ def main() -> int:
               f"retrofit removes, and failing them for it today would red a "
               f"deployed site for the duration of a migration it is queued for.")
     if bad:
-        print(f"\nA1 FAIL — {bad} course-side code director(ies)", file=sys.stderr)
+        print(f"\nA1 FAIL — {bad} integration finding(s)", file=sys.stderr)
         return 1
     print("A1 OK — no course carries kit-owned code")
     return 0

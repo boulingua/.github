@@ -11,11 +11,41 @@ on:
   workflow_dispatch:
 permissions: { contents: read }
 jobs:
-  lychee:
+  inventory:
     runs-on: ubuntu-latest
+    outputs:
+      repositories: ${{ steps.inventory.outputs.repositories }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install PyYAML==6.0.3
+      - id: inventory
+        run: |
+          python - <<'PYCODE'
+          import json, os, re, yaml
+          with open('suite.yml') as stream:
+              records = yaml.safe_load(stream)['repositories']
+          names = [name for name, item in records.items() if item['visibility'] == 'public']
+          if not names or any(not re.fullmatch(r'[a-z0-9_.-]+', name) for name in names):
+              raise SystemExit('Invalid public repository inventory')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              stream.write('repositories='+json.dumps(names)+'\n')
+          PYCODE
+  lychee:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        repository: ${{ fromJSON(needs.inventory.outputs.repositories) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: boulingua/${{ matrix.repository }}
       - uses: lycheeverse/lychee-action@v2
-        with: { args: "--no-progress --max-concurrency 4 ." }
+        with:
+          args: "--no-progress --max-concurrency 4 --exclude-loopback --scheme http --scheme https -- '**/*.md' '**/*.html'"
         # No continue-on-error. The job is advisory because of WHEN it runs and
         # what it reports, not because its failures are hidden.
