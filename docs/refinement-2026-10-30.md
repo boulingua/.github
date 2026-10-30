@@ -63,7 +63,7 @@ The following supersedes the earlier in-progress measurements above.
   courses fail D6 because historical audio lacks adequate provenance and dated
   approval. Their other blocking engineering checks pass after the final
   template/override repair. The English C1 and resource-catalogue C4 registration warnings remain recorded.
-- Forty kit regressions, fifteen curriculum regressions and four workflow
+- Forty-one kit regressions, fifteen curriculum regressions and four workflow
   regressions passed. The organisation audit examined 26 active repositories
   and 29 workflows with zero findings. Local browser checks exercise search,
   downloads, filtering, lazy graphs, mobile menus, no-JavaScript content and
