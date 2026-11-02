@@ -2,9 +2,9 @@
   "schema_version": 1,
   "mode": "candidate",
   "deploy": false,
-  "include_drafts": true,
-  "course": "rki",
-  "course_commit": "450be44ce08d24792a04f76f2eeea98ad0c63a42",
+  "include_drafts": false,
+  "course": "afl",
+  "course_commit": "c1e0f826dc693fd0755b3e9d1ec108cc74e8d71d",
   "kit_commit": "3642629786411186cb014922b66fc6dccd441996",
   "curriculum_commit": "dd10b463bd7881f560d6bb22a9db3519e9f73937"
 }
