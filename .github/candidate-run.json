@@ -3,8 +3,8 @@
   "mode": "candidate",
   "deploy": false,
   "include_drafts": false,
-  "course": "ressources",
-  "course_commit": "3b5fc72f14dbbedb046ad69efbb1cbf3c47fdd40",
+  "course": "website",
+  "course_commit": "dc64fb0c4d758852995f76635fbec6e6f49abaa5",
   "kit_commit": "3642629786411186cb014922b66fc6dccd441996",
   "curriculum_commit": "dd10b463bd7881f560d6bb22a9db3519e9f73937"
 }
