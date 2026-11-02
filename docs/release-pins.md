@@ -76,7 +76,9 @@ Once manual dispatch is available, the same workflow accepts `course`,
 `course_commit`, `kit_commit`, `curriculum_commit` and `include_drafts` inputs against the chosen
 candidate workflow branch. Repeat for each applicable consumer. Download its
 candidate inputs, source receipt and build artifact; record the actual hosted
-run URL and full gate result. No hosted candidate run was performed locally.
+run URL and full gate result. The completed review campaign is recorded in
+[the 2 November verification](release-readiness-2026-11-02.md); it does not
+publish the historical production locks or create new release tags.
 
 The permissions and workflow context follow GitHub's
 [workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)
@@ -159,5 +161,5 @@ python .github/scripts/update_release_pins.py rollback . ../consumer-pin-apply.j
 This restores local files only. An actual deployment rollback requires a reviewed
 revert/rebuild of the last approved recorded dependency/artifact set, with a
 fresh hosted run and observed deployment. Do not reset shared history or move
-an immutable tag. No hosted run, new release or deployment rollback has been
-performed during this local preparation.
+an immutable tag. Candidate CI has run against exact review commits. No new foundation release
+or deployment rollback has been performed during this preparation.
