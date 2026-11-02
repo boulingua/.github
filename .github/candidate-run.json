@@ -3,8 +3,8 @@
   "mode": "candidate",
   "deploy": false,
   "include_drafts": false,
-  "course": "fle",
-  "course_commit": "0d505b65032b72b91261f7d159456d5f5a744619",
+  "course": "daf",
+  "course_commit": "8cb304daeabc483762566f20951fb754105a7043",
   "kit_commit": "3642629786411186cb014922b66fc6dccd441996",
   "curriculum_commit": "dd10b463bd7881f560d6bb22a9db3519e9f73937"
 }
