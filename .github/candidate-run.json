@@ -2,9 +2,9 @@
   "schema_version": 1,
   "mode": "candidate",
   "deploy": false,
-  "include_drafts": true,
-  "course": "nvt",
-  "course_commit": "d4a77d12818de6113c92ab91a7cd0762e9939556",
-  "kit_commit": "8335e5f08e7c2425cf46a73c59bdbd0aaac5a2b8",
+  "include_drafts": false,
+  "course": "ressources",
+  "course_commit": "3b5fc72f14dbbedb046ad69efbb1cbf3c47fdd40",
+  "kit_commit": "3642629786411186cb014922b66fc6dccd441996",
   "curriculum_commit": "dd10b463bd7881f560d6bb22a9db3519e9f73937"
 }
