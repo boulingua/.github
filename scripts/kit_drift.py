@@ -34,14 +34,17 @@ course, not beside it — and from a sibling otherwise.
 from __future__ import annotations
 
 import sys
+import hashlib
+import json
 import re
 import yaml
+import subprocess
+import tomllib
+from urllib.parse import urlparse
 from pathlib import Path
 
 # Directories that belong to the kit and must not exist in a course.
 KIT_OWNED = ["layouts", "assets", "i18n", "archetypes", "scripts", "_scripts"]
-# Repos that are not courses and legitimately hold their own code.
-NOT_A_COURSE = {"kit", "curriculum", ".github", "website", "ressources"}
 
 
 def is_repo(p: Path) -> bool:
@@ -49,6 +52,108 @@ def is_repo(p: Path) -> bool:
     by boulingua.yml or hugo.toml — the two files a course always has and a
     checkout root never does."""
     return (p / "boulingua.yml").exists() or (p / "hugo.toml").exists()
+
+
+
+def consumer_identity(repo, config, registry):
+    """Resolve a suite consumer without granting privileges to its folder name.
+
+    Module, declared site/role, publication path and an available Git origin
+    must agree. This checks identity consistency, not cryptographic ownership.
+    """
+    module_file = repo / 'go.mod'
+    if not module_file.is_file():
+        raise ValueError('go.mod is required to identify a kit consumer')
+    modules = re.findall(r'^\s*module[ \t]+([^\s]+)[ \t]*(?://[^\n]*)?$', module_file.read_text(), re.M)
+    if len(modules) != 1:
+        raise ValueError('go.mod must declare exactly one module identity')
+    match = re.fullmatch(r'github\.com/boulingua/([a-z][a-z0-9-]*)', modules[0])
+    if not match or match[1] not in registry:
+        raise ValueError('module is not a registered Boulingua consumer')
+    identity = match[1]
+    specification = registry[identity]
+    kind = specification.get('kind')
+    if kind not in {'course', 'hub', 'catalogue', 'reading-library'}:
+        raise ValueError('module role is not a site consumer')
+    code = specification.get('site_code', identity)
+    manifest = repo / 'boulingua.yml'
+    if manifest.is_file():
+        declared = yaml.safe_load(manifest.read_text())
+        if not isinstance(declared, dict) or declared.get('code') != code or declared.get('kind') != kind:
+            raise ValueError('boulingua.yml code/kind disagrees with the registered module identity')
+    elif kind != 'reading-library':
+        raise ValueError('boulingua.yml is required for this registered consumer')
+    if config.get('params', {}).get('code') != code:
+        raise ValueError('Hugo params.code disagrees with the registered module identity')
+    publication = urlparse(config.get('baseURL', ''))
+    if publication.scheme not in {'https', 'http'} or not publication.netloc or publication.path.rstrip('/') != '/'+identity:
+        raise ValueError('Hugo baseURL path disagrees with the registered module identity')
+    if (repo / '.git').exists():
+        origin = subprocess.run(['git', '-C', str(repo), 'config', '--get', 'remote.origin.url'],
+                                capture_output=True, text=True)
+        allowed = {f'https://github.com/boulingua/{identity}',
+                   f'git@github.com:boulingua/{identity}',
+                   f'ssh://git@github.com/boulingua/{identity}'}
+        remote = origin.stdout.strip().removesuffix('.git').rstrip('/')
+        if origin.returncode or remote not in allowed:
+            raise ValueError('Git origin disagrees with the registered module identity')
+    return identity, specification
+
+
+def catalogue_translation(repo, relative, kit_root, identity, specification):
+    """A catalogue may add its own keys, never replace shared chrome strings."""
+    if identity != 'ressources' or specification.get('kind') != 'catalogue' or relative not in {
+            'i18n/de.yaml', 'i18n/en.yaml', 'i18n/fr.yaml'}:
+        return False
+    try:
+        local = yaml.safe_load((repo / relative).read_text())
+        shared = yaml.safe_load((kit_root / relative).read_text())
+    except (OSError, yaml.YAMLError):
+        return False
+    return isinstance(local, dict) and isinstance(shared, dict) and not set(local).intersection(shared)
+
+
+
+def compatibility_paths(repo, kit_root, specification):
+    """Authorize only exact shared copies needed by one historical module pin.
+
+    The suite declares paths and pin; the product manifest binds bytes; the
+    current shared checkout independently confirms those bytes. Advancing the
+    module requires removing both manifest and local copies together.
+    """
+    contract = specification.get('temporary_kit_compatibility')
+    if not contract:
+        return set()
+    paths = set(contract['paths'])
+    manifest = repo / contract['manifest']
+    module = (repo / 'go.mod').read_text()
+    pins = re.findall(r'^\s*(?:require[ \t]+)?github\.com/boulingua/kit[ \t]+(v[^\s]+)[ \t]*(?://[^\n]*)?$', module, re.M)
+    if len(pins) != 1:
+        raise ValueError('temporary compatibility requires exactly one kit module requirement')
+    # This bounded historical contract permits the published dependency graph
+    # only. Reject the directive, not a guessed module operand: Go allows
+    # quoted paths and replacement blocks that evade an unquoted-path regex.
+    if re.search(r'^\s*replace\b', module, re.M):
+        raise ValueError('temporary compatibility cannot replace published module dependencies')
+    if not manifest.exists():
+        if pins[0] == contract['kit_pin'] or any((repo / path).exists() for path in paths):
+            raise ValueError('temporary compatibility manifest or required copies missing; retire all with the old pin')
+        return set()
+    data = json.loads(manifest.read_text())
+    if not isinstance(data, dict) or data.get('kit_pin') != contract['kit_pin'] or pins[0] != contract['kit_pin']:
+        raise ValueError('temporary compatibility must retire when the historical kit pin changes')
+    files = data.get('files')
+    if not isinstance(files, dict) or set(files) != paths:
+        raise ValueError('temporary compatibility manifest paths differ from the suite contract')
+    for relative, expected in files.items():
+        local, shared = repo / relative, kit_root / relative
+        if not isinstance(expected, str) or not re.fullmatch(r'[0-9a-f]{64}', expected):
+            raise ValueError(f'invalid temporary compatibility digest: {relative}')
+        if not local.is_file() or not shared.is_file():
+            raise ValueError(f'temporary compatibility counterpart missing: {relative}')
+        if any(hashlib.sha256(path.read_bytes()).hexdigest() != expected for path in (local, shared)):
+            raise ValueError(f'temporary compatibility bytes differ from manifest/current kit: {relative}')
+    return paths
 
 
 def workflow_errors(repo, template, product):
@@ -118,7 +223,7 @@ def main() -> int:
     for repo in repos:
         # The MODULE VERSION check applies to every repo that imports the kit,
         # not only to the ones whose layouts it owns. website and ressources are
-        # NOT_A_COURSE for the layouts rule and were skipped entirely — which is
+        # historically exempt from the layouts rule and were skipped entirely — which is
         # how website sat on v1.4.2 while ressources ran v1.7.0 with nothing
         # reporting it.
         cfgp = repo / "hugo.toml"
@@ -156,8 +261,6 @@ def main() -> int:
                               f"v{'.'.join(map(str, have))}, current is "
                               f"v{'.'.join(map(str, latest))}")
 
-        if repo.name in NOT_A_COURSE:
-            continue
         # The discriminator is whether hugo.toml actually IMPORTS the kit, not
         # whether boulingua.yml exists. A course can carry the config while
         # still holding its own layouts — that is precisely the state the three
@@ -167,13 +270,31 @@ def main() -> int:
         cfg = repo / "hugo.toml"
         if not cfg.exists():
             continue
-        if "boulingua/kit" not in cfg.read_text(encoding="utf-8"):
+        try:
+            config = tomllib.loads(cfg.read_text(encoding="utf-8"))
+        except (ValueError, OSError) as exc:
+            print(f'::error::{repo.name}: invalid Hugo configuration: {exc}')
+            bad += 1
+            continue
+        imports = config.get('module', {}).get('imports', [])
+        if not any(isinstance(entry, dict) and entry.get('path') == 'github.com/boulingua/kit' for entry in imports):
             pre_adoption.append(repo.name)
             continue
         checked += 1
-        specification = registry.get(repo.name, {})
+        try:
+            identity, specification = consumer_identity(repo, config, registry)
+        except (ValueError, OSError, yaml.YAMLError, AttributeError, TypeError) as exc:
+            print(f'::error::{repo.name}: consumer identity cannot be verified: {exc}')
+            bad += 1
+            continue
         product = specification if specification.get('kind') == 'reading-library' else None
-        product_overrides = {x['path']: x for x in (product or {}).get('shared_overrides', [])}
+        try:
+            compatibility = compatibility_paths(repo, kit_root, specification)
+        except (ValueError, OSError, TypeError, KeyError) as exc:
+            print(f'::error::{repo.name}: invalid temporary compatibility: {exc}')
+            bad += 1
+            compatibility = set()
+        product_overrides = {x['path']: x for x in specification.get('shared_overrides', [])}
         for path, entry in product_overrides.items():
             if not entry.get('reason') or not (repo / path).is_file() or not (kit_root / path).is_file():
                 print(f'::error::{repo.name}: invalid or obsolete product override {path}')
@@ -220,7 +341,10 @@ def main() -> int:
             forks = sorted(q for q in p.rglob("*")
                            if q.is_file() and q.relative_to(p).as_posix() in kit_names
                            and q.relative_to(repo).as_posix() not in overrides.get(repo.name, {})
-                           and q.relative_to(repo).as_posix() not in product_overrides)
+                           and q.relative_to(repo).as_posix() not in product_overrides
+                           and q.relative_to(repo).as_posix() not in compatibility
+                           and not catalogue_translation(repo, q.relative_to(repo).as_posix(),
+                                                         kit_root, identity, specification))
             own = [q for q in p.rglob("*")
                    if q.is_file() and q.relative_to(p).as_posix() not in kit_names]
             for q in forks:
@@ -256,16 +380,14 @@ def main() -> int:
     # Checking nothing is not passing. In single-repo mode a zero here means
     # the gate was pointed at something it does not understand, which is
     # exactly how it ran green on all five courses.
-    if single and not checked and target.name not in NOT_A_COURSE \
-            and target.name not in pre_adoption:
+    if single and not checked and target.name not in pre_adoption:
         print(f"::error::A1 examined no repository. {target} was given as a "
               f"course but does not import the kit module and is not on the "
               f"pre-adoption list — so nothing was compared and this is not a "
               f"pass.", file=sys.stderr)
         return 1
     if single and not checked:
-        why = ("is not a course" if target.name in NOT_A_COURSE
-               else "has not adopted the kit module yet")
+        why = "has not adopted the kit module yet"
         print(f"A1 n/a — {target.name} {why}.")
         return 1 if bad else 0
     if not single and not checked:

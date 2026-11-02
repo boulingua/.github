@@ -95,9 +95,17 @@ repositories:
     archived: false
   "scriptlibrary":
     kind: reading-library
+    site_code: hub
     visibility: public
     archived: false
     workflow: .github/workflows/pages.yml
+    temporary_kit_compatibility:
+      manifest: kit-compatibility.json
+      kit_pin: v1.22.0
+      paths:
+        - layouts/_partials/head/custom-icons.html
+        - layouts/_partials/head/theme-styles.html
+        - static/brand/hub.svg
     shared_overrides:
       - path: layouts/home.html
         reason: Book catalogue replaces the generic course landing page.
@@ -122,3 +130,10 @@ repositories:
     site_code: hub
     visibility: public
     archived: false
+    shared_overrides:
+      - path: layouts/_partials/header.html
+        reason: The organisation hub has its own umbrella navigation header.
+      - path: assets/css/custom.css
+        reason: The organisation landing pages use dedicated hub component styling.
+      - path: archetypes/default.md
+        reason: Hub pages use a non-course authoring scaffold.
