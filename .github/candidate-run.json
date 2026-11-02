@@ -2,9 +2,9 @@
   "schema_version": 1,
   "mode": "candidate",
   "deploy": false,
-  "include_drafts": false,
-  "course": "daf",
-  "course_commit": "8cb304daeabc483762566f20951fb754105a7043",
+  "include_drafts": true,
+  "course": "nsf",
+  "course_commit": "72e569ad822347a028fb340a16f1c6fa812713b9",
   "kit_commit": "3642629786411186cb014922b66fc6dccd441996",
   "curriculum_commit": "dd10b463bd7881f560d6bb22a9db3519e9f73937"
 }
