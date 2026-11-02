@@ -3,8 +3,8 @@
   "mode": "candidate",
   "deploy": false,
   "include_drafts": true,
-  "course": "lle",
-  "course_commit": "05c0023b3eed044018d058e89046184c1c6a9583",
+  "course": "gfl",
+  "course_commit": "5ecac11bc1fde76392f045fef09a536311635ea9",
   "kit_commit": "3642629786411186cb014922b66fc6dccd441996",
   "curriculum_commit": "dd10b463bd7881f560d6bb22a9db3519e9f73937"
 }
