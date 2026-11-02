@@ -3,8 +3,8 @@
   "mode": "candidate",
   "deploy": false,
   "include_drafts": true,
-  "course": "ple",
-  "course_commit": "2c6c62edf6be0fc0ee8f62f6bf8860a86e26b83f",
+  "course": "pfl",
+  "course_commit": "e2bb822f7175ac9eb456136c96c88920f673b555",
   "kit_commit": "3642629786411186cb014922b66fc6dccd441996",
   "curriculum_commit": "dd10b463bd7881f560d6bb22a9db3519e9f73937"
 }
