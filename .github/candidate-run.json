@@ -3,8 +3,8 @@
   "mode": "candidate",
   "deploy": false,
   "include_drafts": false,
-  "course": "afl",
-  "course_commit": "c1e0f826dc693fd0755b3e9d1ec108cc74e8d71d",
+  "course": "pfa",
+  "course_commit": "f59c017237edb6479fe36700c0055ffd59cdf4db",
   "kit_commit": "3642629786411186cb014922b66fc6dccd441996",
   "curriculum_commit": "dd10b463bd7881f560d6bb22a9db3519e9f73937"
 }
