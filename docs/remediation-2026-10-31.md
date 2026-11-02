@@ -109,3 +109,30 @@ Real negative probes rejected an unpublished exact tag and an uncommitted
 candidate before producing output. The snapshot command records all3 foundation
 working trees and20 consumer declarations; its current external receipt is a
 local candidate, not a published Git identity.
+
+
+## Hosted checkout identity correction — 2 November 2026
+
+The initial coordinated hosted run passed NSF's actual draft teaching tranche,
+but resources and website exposed a genuine A1 defect: their documented
+exceptions depended on checkout folder names. A1 now verifies the registered
+Go module against site/role declarations, public path and an available Git
+origin. Website has only three explicit hub overrides. The resource catalogue
+may add its own translation keys but cannot replace shared chrome keys.
+Scriptlibrary's three exact compatibility files are bound to their recorded
+historical pin and both product/shared hashes; all copies must retire with pin
+promotion. The temporary contract rejects every Go replacement directive,
+including quoted/block forms found by independent review. Other forks fail.
+
+All 21 actual consumers and three real local clones named `course` pass A1.
+The org suite passes 35 tests. The matching kit counting-mark validator derives
+its public prefix from baseURL, preserves root-relative locks and rejects mixed
+conventions and missing/duplicate/moved marks. Seven new regressions raise the
+kit suite to 163 tests; existing EFL/FLE/DaF builds pass the renamed-source check.
+No teaching, audio, PDF or material-producer bytes changed. Prior failed hosted
+runs remain recorded; final hosted acceptance must use the corrected revisions.
+
+Scriptlibrary's exact `21acdef7` hosted run passed its 288-PDF, 36,623-page and
+166,912-paragraph source comparison and all 288 reader combinations; deployment
+was skipped: [run 41480154465](https://github.com/boulingua/scriptlibrary/actions/runs/41480154465).
+The package lock's fresh npm audit reports zero known vulnerabilities.

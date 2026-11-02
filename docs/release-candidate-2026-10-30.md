@@ -11,7 +11,7 @@ runner and gate registry must be from the same compatible release.
 | Component | Required evidence | Current limit |
 |---|---|---|
 | Kit and products | Clean dependency install, regression/build/browser checks, reviewed diffs and package contents | Exact hosted kit, curriculum and product checkpoints are recorded in the remediation log; final follow-up checks remain separately bound to their commits |
-| Organisation workflow | Matching kit checkout used both by Hugo and gates; permissions and failure propagation checked | 22 local contract tests pass; read-only immutable candidate workflow prepared; hosted execution pending |
+| Organisation workflow | Matching kit checkout used both by Hugo and gates; permissions and failure propagation checked | 35 local contract tests pass; initial hosted runs exposed and closed checkout-identity defects; final corrected hosted campaign pending |
 | Curriculum | Schema, resolver, source completeness and coverage checks | 1,199 entries; all 1,170 original entries preserved; 29 restored entries await editorial approval; task mappings remain proposed |
 | Established courses | Build/browser/download checks, URL/mark preservation, approved mappings and recording provenance | All three final builds/browser runs pass; 1,188 unit PDFs verified; D6 audio failures, listening validity and substantive teaching deficits remain |
 | Development courses | Reviewed lessons and evidence matching the accepted target scope | Eleven first A1 unit/assessment/pronunciation tranches and 33 PDFs prepared; native/teaching review and remaining progression pending; four courses explicitly deferred |
