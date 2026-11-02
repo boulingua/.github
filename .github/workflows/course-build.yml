@@ -10,30 +10,17 @@
 # That is what makes "if it passes locally it passes in CI" true rather than
 # aspirational, and it is why kit's CLI is on the critical path for every gate.
 #
-# Everything configurable lives in the course's boulingua.yml, read by the
-# scripts themselves. There is deliberately no `with:` block: that keeps the
-# caller a constant, and a constant is drift-gatable.
+# Content policy lives in boulingua.yml. Foundation identities live in the
+# explicit release lock; the shared caller supplies its identical org commit.
 name: course-build
 
 on:
   workflow_call:
     inputs:
-      kit_ref:
-        description: "Optional kit override. By default use the version pinned in course go.mod."
-        type: string
-        default: ""
-      curriculum_ref:
-        description: "curriculum tag. A CI-time checkout, never vendored (ADR-0011)."
-        type: string
-        default: ""
       org_ref:
-        description: >-
-          `.github` tag. Two gates — A1 and A16 — own scripts outside the kit, and
-          the register has to be told where each owner is rather than deriving it.
-          Defaults to the tag this workflow itself is called at, so the register
-          and the workflow are always the same revision.
+        description: "Required immutable commit, identical to the caller workflow uses ref and release-pins.json."
         type: string
-        default: v1
+        required: true
 
 # The floor. Each job narrows further; nothing here grants write.
 permissions:
@@ -58,28 +45,36 @@ jobs:
         uses: actions/setup-python@v5
         with: { python-version: "3.12" }
 
-      - name: Resolve the course release pins
-        id: refs
+      - name: Install release contract validators
+        run: pip install PyYAML==6.0.3 jsonschema==4.26.0
+
+      - name: Verify the caller org pin before checking out its code
         env:
-          KIT_OVERRIDE: ${{ inputs.kit_ref }}
-          CURRICULUM_OVERRIDE: ${{ inputs.curriculum_ref }}
+          ORG_REF: ${{ inputs.org_ref }}
         run: |
           python - <<'PYCODE'
-          import os, pathlib, re
-          module = pathlib.Path('go.mod').read_text()
-          match = re.search(r'github.com/boulingua/kit\s+(v[^\s]+)', module)
-          if not match:
-              raise SystemExit('go.mod must pin github.com/boulingua/kit')
-          kit = os.environ['KIT_OVERRIDE'] or match[1]
-          manifest = pathlib.Path('curriculum.yml')
-          version = re.search(r'(?m)^framework_version:\s*["\']?([0-9]+\.[0-9]+\.[0-9]+)', manifest.read_text()) if manifest.exists() else None
-          curriculum = os.environ['CURRICULUM_OVERRIDE'] or ('v'+version[1] if version else 'v1.2.0')
-          for ref in [kit, curriculum]:
-              if not re.fullmatch(r'[A-Za-z0-9/._-]+', ref):
-                  raise SystemExit('Invalid dependency ref')
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-              out.write(f'kit={kit}\ncurriculum={curriculum}\n')
+          import json, os, pathlib, re, yaml
+          ref = os.environ['ORG_REF']
+          if not re.fullmatch(r'[a-f0-9]{40}', ref):
+              raise SystemExit('org_ref must be an immutable 40-character commit')
+          caller = yaml.load(pathlib.Path('.github/workflows/deploy.yml').read_text(), Loader=yaml.BaseLoader)
+          job = caller['jobs']['course']
+          lock = json.loads(pathlib.Path('release-pins.json').read_text())
+          if job['uses'] != 'boulingua/.github/.github/workflows/course-build.yml@'+ref or job.get('with', {}).get('org_ref') != ref or lock['org']['commit'] != ref:
+              raise SystemExit('caller workflow, explicit org_ref and release lock differ')
           PYCODE
+
+      - name: Checkout org .github
+        uses: actions/checkout@v4
+        with:
+          repository: boulingua/.github
+          ref: ${{ inputs.org_ref }}
+          path: .github-org
+          fetch-depth: 0
+
+      - name: Resolve the course release pins
+        id: refs
+        run: python .github-org/scripts/release_pins.py . --resolve-only --org-ref '${{ inputs.org_ref }}' --github-output "$GITHUB_OUTPUT"
 
       # kit and curriculum arrive as checkouts at a pinned tag. Never vendored,
       # never a submodule: a course repo contains content, not code.
@@ -89,6 +84,7 @@ jobs:
           repository: boulingua/kit
           ref: ${{ steps.refs.outputs.kit }}
           path: .kit
+          fetch-depth: 0
 
       - name: Checkout curriculum
         uses: actions/checkout@v4
@@ -96,20 +92,10 @@ jobs:
           repository: boulingua/curriculum
           ref: ${{ steps.refs.outputs.curriculum }}
           path: .curriculum
+          fetch-depth: 0
 
-      # gates.yml names three owners, and A1's kit_drift.py lives in this one.
-      # Not checking it out is what stopped the battery between 2026-08-22 and
-      # 2026-08-30: the register derived the org root from the kit's parent,
-      # which is the checkout root locally and the COURSE root here, so it
-      # looked for kit_drift.py inside the course's own `.github/workflows`
-      # directory. The path must be `.github-org`; `.github` is already taken by
-      # the course's own caller, and that collision is the whole story.
-      - name: Checkout org .github
-        uses: actions/checkout@v4
-        with:
-          repository: boulingua/.github
-          ref: ${{ inputs.org_ref }}
-          path: .github-org
+      - name: Verify actual release checkouts and conformance schema
+        run: python .github-org/scripts/release_pins.py . --org-ref '${{ inputs.org_ref }}' --kit .kit --curriculum .curriculum --org .github-org
 
       # go-version-file, always. A literal drifts from go.mod and the failure is
       # not a red build — it is a module graph that resolves differently here

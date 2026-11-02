@@ -2,7 +2,7 @@
 
 Two schemes, because the repositories are two kinds of thing.
 
-## `kit`, `curriculum`, `.github` — SemVer, with moving majors
+## `kit`, `curriculum`, `.github` — immutable exact SemVer
 
 | | |
 |---|---|
@@ -10,9 +10,11 @@ Two schemes, because the repositories are two kinds of thing.
 | **MINOR** | additive; a course can ignore it until it wants it |
 | **PATCH** | a fix that changes no interface |
 
-Courses pin `@v1`. The moving tags `v1` and `v1.2` are maintained so a course
-gets fixes without a commit, and `org-audit` reports how far behind each course
-is rather than updating anything on its own.
+New releases pin exact published commits and SemVer versions through an explicit
+coordinated release lock. Moving `v1`/`v1.2` tags remain historical compatibility
+references; they are not the release input for the remediated suite. See
+[release-pins.md](release-pins.md) for the publication order, actual version/schema
+checks, update tool and rollback procedure.
 
 Descriptor ids in `curriculum` are **additive and never renumbered** — a
 withdrawn statement becomes `status: deprecated`. That is what makes a MINOR
@@ -38,7 +40,7 @@ checked. The filename is the reminder.
 Every tag is annotated. A release is a signed statement about a corpus of
 teaching material, not a convenience marker.
 
-## Today
+## Historical baseline (retained; not current release readiness)
 
 `daf v1.0.0` and `v0.1.0` · `efl v0.1.0` · `fle v0.1.0` · `ressources v0.1.0` ·
 `kit v1.0.0` · `curriculum` at 1.1.0 unreleased. `daf` is the only course its

@@ -119,5 +119,6 @@ repositories:
     archived: false
   "website":
     kind: hub
+    site_code: hub
     visibility: public
     archived: false

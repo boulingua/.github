@@ -1,0 +1,143 @@
+name: Exact candidate validation (no deployment)
+on:
+  push:
+    branches: ['candidate-ci/**']
+  workflow_dispatch:
+    inputs:
+      course:
+        description: 'Shared course or hub repository name'
+        required: true
+        type: string
+      course_commit:
+        description: 'Immutable course commit (40 hexadecimal characters)'
+        required: true
+        type: string
+      kit_commit:
+        description: 'Immutable candidate kit commit'
+        required: true
+        type: string
+      curriculum_commit:
+        description: 'Immutable candidate framework commit'
+        required: true
+        type: string
+      include_drafts:
+        description: 'Include unpublished teaching drafts in this review-only build'
+        required: false
+        default: false
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    env:
+      BROWSER_PRONUNCIATION: '1'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout this exact workflow and org validators
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: org
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install PyYAML==6.0.3 jsonschema==4.26.0
+      - name: Resolve immutable candidate manifest
+        id: refs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUTS_JSON: ${{ toJSON(inputs) }}
+          ORG_COMMIT: ${{ github.workflow_sha }}
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, re, yaml
+          values = json.loads(os.environ['INPUTS_JSON']) if os.environ['EVENT_NAME']=='workflow_dispatch' else json.loads(pathlib.Path('org/.github/candidate-run.json').read_text())
+          code = values.get('course', '')
+          registry = yaml.safe_load(pathlib.Path('org/suite.yml').read_text())['repositories']
+          if not re.fullmatch('[a-z][a-z0-9-]*', code) or code not in registry or registry[code].get('archived') or registry[code].get('kind') not in {'course','hub','catalogue'}:
+              raise SystemExit('unsupported shared course/hub')
+          include_drafts=values.get('include_drafts',False)
+          if not isinstance(include_drafts,bool): raise SystemExit('include_drafts must be a boolean')
+          values = {key:values.get(key,'') for key in ['course','course_commit','kit_commit','curriculum_commit']}
+          values['include_drafts']=include_drafts
+          values.update(schema_version=1, mode='candidate', deploy=False, org_commit=os.environ['ORG_COMMIT'])
+          for key in ['course_commit','kit_commit','curriculum_commit','org_commit']:
+              if not re.fullmatch('[a-f0-9]{40}', values[key]): raise SystemExit(key+' must be an immutable commit')
+          pathlib.Path('candidate-inputs.json').write_text(json.dumps(values,indent=2)+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              for key in ['course','course_commit','kit_commit','curriculum_commit']: out.write(key+'='+values[key]+'\n')
+              out.write('include_drafts='+str(include_drafts).lower()+'\n')
+          PY
+      - uses: actions/checkout@v4
+        with:
+          repository: boulingua/${{ steps.refs.outputs.course }}
+          ref: ${{ steps.refs.outputs.course_commit }}
+          path: course
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: boulingua/kit
+          ref: ${{ steps.refs.outputs.kit_commit }}
+          path: kit
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: boulingua/curriculum
+          ref: ${{ steps.refs.outputs.curriculum_commit }}
+          path: curriculum
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact candidate inputs and actual conformance schema
+        run: python org/scripts/check_candidate.py . candidate-inputs.json --receipt candidate-source-receipt.json
+      - uses: actions/setup-go@v5
+        with: {go-version-file: kit/go.mod}
+      - uses: peaceiris/actions-hugo@v3
+        with: {hugo-version: '0.159.2', extended: true}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install locked candidate tools
+        run: |
+          pip install --requirement kit/requirements.txt
+          npm ci --prefix kit --no-audit --no-fund
+          npm exec --prefix kit -- playwright install --with-deps chromium
+          if [[ -f course/package-lock.json ]]; then
+            npm ci --prefix course --no-audit --no-fund
+          elif [[ -f course/package.json ]]; then
+            echo 'Course package.json has no lockfile' >&2
+            exit 1
+          fi
+      - name: Select the exact candidate kit for Hugo
+        run: |
+          python - <<'PY'
+          import pathlib, re, os
+          version=re.search(r'(?m)^go ([0-9.]+)$',pathlib.Path('kit/go.mod').read_text())[1]
+          pathlib.Path('.hugo.work').write_text('go '+version+'\nuse ./kit\n')
+          with open(os.environ['GITHUB_ENV'],'a') as out: out.write('HUGO_MODULE_WORKSPACE='+str(pathlib.Path('.hugo.work').resolve())+'\n')
+          PY
+      - name: Build exact candidate
+        env:
+          INCLUDE_DRAFTS: ${{ steps.refs.outputs.include_drafts }}
+        run: |
+          args=()
+          if [[ "$INCLUDE_DRAFTS" == true ]]; then args+=(--drafts); fi
+          python kit/bin/kit build course "${args[@]}"
+      - name: Run the complete candidate battery
+        run: python kit/bin/kit check course --ci --owner-root .github=org --owner-root curriculum=curriculum
+      - name: Retain candidate evidence and built files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-${{ steps.refs.outputs.course }}-${{ github.run_id }}
+          path: |
+            candidate-inputs.json
+            candidate-source-receipt.json
+            course/public
+            course/build
+          if-no-files-found: error
+          retention-days: 14
