@@ -1,8 +1,8 @@
 # Coherent foundation and consumer releases
 
-The remediated suite is still a local candidate. A successful local build with a
+The remediated suite uses the v2 organisation and kit contracts. A successful local build with a
 workspace override does not publish its dependencies or establish hosted CI.
-The current `release-pins.json` files explicitly retain a **historical** set.
+Unpromoted `release-pins.json` files explicitly retain a **historical** set.
 They are evidence of old dependencies, not closure of the new release criteria.
 
 The historical curriculum `v1.2.0` tag resolves to
@@ -10,6 +10,12 @@ The historical curriculum `v1.2.0` tag resolves to
 does not contain `schema/conformance.schema.json`. Do not relabel or move that
 tag. Publish the corrected framework as a new exact version with matching
 `VERSION`, reviewed schema and source content.
+
+The v2 kit module is `github.com/boulingua/kit/v2`. Promotion updates both
+`go.mod` and the Hugo module import; the major suffix must match the exact
+version in the release lock. Existing v1 tags and imports remain historical.
+Framework 1.3.0 adds the conformance schema with an aligned `VERSION`.
+These foundation releases do not approve course audio or native-language review.
 
 ## Contract and local candidate record
 

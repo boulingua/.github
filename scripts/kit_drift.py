@@ -127,7 +127,7 @@ def compatibility_paths(repo, kit_root, specification):
     paths = set(contract['paths'])
     manifest = repo / contract['manifest']
     module = (repo / 'go.mod').read_text()
-    pins = re.findall(r'^\s*(?:require[ \t]+)?github\.com/boulingua/kit[ \t]+(v[^\s]+)[ \t]*(?://[^\n]*)?$', module, re.M)
+    pins = re.findall(r'^\s*(?:require[ \t]+)?github\.com/boulingua/kit(?:/v[0-9]+)?[ \t]+(v[^\s]+)[ \t]*(?://[^\n]*)?$', module, re.M)
     if len(pins) != 1:
         raise ValueError('temporary compatibility requires exactly one kit module requirement')
     # This bounded historical contract permits the published dependency graph
@@ -277,7 +277,7 @@ def main() -> int:
             bad += 1
             continue
         imports = config.get('module', {}).get('imports', [])
-        if not any(isinstance(entry, dict) and entry.get('path') == 'github.com/boulingua/kit' for entry in imports):
+        if not any(isinstance(entry, dict) and re.fullmatch(r'github\.com/boulingua/kit(?:/v[0-9]+)?', str(entry.get('path',''))) for entry in imports):
             pre_adoption.append(repo.name)
             continue
         checked += 1

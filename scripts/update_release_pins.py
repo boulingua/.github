@@ -15,7 +15,7 @@ import subprocess
 import tempfile
 import yaml
 from jsonschema import Draft202012Validator
-from release_pins import SEMVER, WORKFLOW, REPOSITORIES, declarations
+from release_pins import SEMVER, WORKFLOW, REPOSITORIES, declarations, kit_module_path
 
 def digest(data):return hashlib.sha256(data).hexdigest()
 
@@ -84,11 +84,12 @@ def prepare(tags,output):
         schema_bytes=(trees['curriculum']/'schema/conformance.schema.json').read_bytes()
         schema=json.loads(schema_bytes);Draft202012Validator.check_schema(schema)
         kit_module=(trees['kit']/'go.mod').read_text()
-        if not re.search(r'(?m)^module github.com/boulingua/kit\s*$',kit_module):raise ValueError('published kit module identity differs')
+        module_path=kit_module_path(records['kit']['version'])
+        if not re.search(r'(?m)^module '+re.escape(module_path)+r'\s*$',kit_module):raise ValueError('published kit module identity differs')
         go_version=re.search(r'(?m)^go ([0-9]+\.[0-9]+(?:\.[0-9]+)?)\s*$',kit_module)
         if not go_version:raise ValueError('published kit lacks an exact Go toolchain floor')
         template=caller_for((trees['kit']/'templates/deploy.yml').read_text(),records['org']['commit'])
-        downloaded=json.loads(command(['go','mod','download','-json','github.com/boulingua/kit@'+tags['kit']],cwd=root))
+        downloaded=json.loads(command(['go','mod','download','-json',module_path+'@'+tags['kit']],cwd=root))
         if downloaded.get('Version')!=tags['kit'] or not all(downloaded.get(k,'').startswith('h1:') for k in ['Sum','GoModSum']):raise ValueError('Go did not return verified module digests')
         if downloaded.get('Origin',{}).get('Hash')!=records['kit']['commit']:raise ValueError('Go module origin differs from the published kit commit')
         result={'schema_version':1,'state':'published',**records,
@@ -109,14 +110,19 @@ def plan(root,release):
     changes={};consumers=[];modules=[]
     for repo in sorted(root.iterdir()):
         gomod=repo/'go.mod'
-        if not gomod.is_file() or 'github.com/boulingua/kit ' not in gomod.read_text():continue
+        if not gomod.is_file() or not re.search(r'github\.com/boulingua/kit(?:/v[0-9]+)?\s+v',gomod.read_text()):continue
         modules.append(repo.name);text=gomod.read_text()
-        text,n=re.subn(r'(github\.com/boulingua/kit\s+)v[^\s]+',lambda m:m[1]+'v'+release['kit']['version'],text)
+        module_path=kit_module_path(release['kit']['version'])
+        text,n=re.subn(r'github\.com/boulingua/kit(?:/v[0-9]+)?\s+v[^\s]+',module_path+' v'+release['kit']['version'],text)
         if n!=1:raise ValueError(repo.name+': expected exactly one kit requirement')
         text=re.sub(r'(?m)^go [^\s]+$', 'go '+release['go_version'],text)
         changes[gomod]=text.encode()
+        config=repo/'hugo.toml'
+        if config.exists():
+            content=re.sub(r'github\.com/boulingua/kit(?:/v[0-9]+)?(?=["\'])',module_path,config.read_text())
+            changes[config]=content.encode()
         gosum=repo/'go.sum';sums=gosum.read_text().splitlines() if gosum.exists() else []
-        prefix='github.com/boulingua/kit v'+release['kit']['version']
+        prefix=module_path+' v'+release['kit']['version']
         sums=[line for line in sums if not line.startswith(prefix+' ') and not line.startswith(prefix+'/go.mod ')]
         sums += [prefix+' '+release['kit_sum'],prefix+'/go.mod '+release['kit_go_mod_sum']]
         changes[gosum]=('\n'.join(sorted(set(sums)))+'\n').encode()

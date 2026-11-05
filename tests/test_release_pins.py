@@ -30,6 +30,26 @@ class ReleasePins(unittest.TestCase):
         self.caller='jobs:\n  course:\n    uses: '+pins.WORKFLOW+'a'*40+'\n    with:\n      org_ref: '+'a'*40+'\n'
         path.write_text(self.caller)
 
+    def test_major_module_path_must_agree_with_version(self):
+        self.data['kit'].update(version='2.0.0',tag='v2.0.0')
+        (self.repo/'release-pins.json').write_text(json.dumps(self.data))
+        for module in ['github.com/boulingua/kit','github.com/boulingua/kit/v3']:
+            (self.repo/'go.mod').write_text('require '+module+' v2.0.0\n')
+            with self.assertRaisesRegex(ValueError,'major module path'):pins.declarations(self.repo)
+        (self.repo/'go.mod').write_text('require github.com/boulingua/kit/v2 v2.0.0\n')
+        pins.declarations(self.repo)
+
+    def test_promotion_updates_module_and_hugo_import_together(self):
+        release={**self.data,'kit':{**self.data['kit'],'version':'2.0.0'},
+                 'caller':self.caller,'caller_sha256':update.digest(self.caller.encode()),
+                 'curriculum_schema_text':(self.curriculum/'schema/conformance.schema.json').read_text(),
+                 'go_version':'1.26.1','kit_sum':'h1:model','kit_go_mod_sum':'h1:module'}
+        (self.repo/'hugo.toml').write_text('[[module.imports]]\npath = "github.com/boulingua/kit"\n')
+        changes,_,_=update.plan(self.root,release)
+        self.assertIn(b'github.com/boulingua/kit/v2 v2.0.0',changes[self.repo/'go.mod'])
+        self.assertIn(b'github.com/boulingua/kit/v2"',changes[self.repo/'hugo.toml'])
+        self.assertIn(b'github.com/boulingua/kit/v2 v2.0.0 h1:model',changes[self.repo/'go.sum'])
+
     def git(self,path,*args):
         if args[0]=='status':return ''
         return self.data[{'kit':'kit','curriculum':'curriculum','.github':'org'}[path.name]]['commit']

@@ -15,6 +15,12 @@ SHA = re.compile(r'[a-f0-9]{40}\Z')
 REPOSITORIES = {'org':'boulingua/.github','kit':'boulingua/kit','curriculum':'boulingua/curriculum'}
 WORKFLOW = 'boulingua/.github/.github/workflows/course-build.yml@'
 
+def kit_module_path(version):
+    if not SEMVER.fullmatch(version): raise ValueError('exact kit SemVer required')
+    major = int(version.split('.')[0])
+    return 'github.com/boulingua/kit' + (f'/v{major}' if major >= 2 else '')
+
+
 def load_pins(path):
     data=json.loads(path.read_text())
     if data.get('schema_version')!=1 or data.get('state') not in {'historical','published'}:
@@ -32,8 +38,8 @@ def load_pins(path):
 
 def declarations(repo, expected_org=None):
     pins=load_pins(repo/'release-pins.json')
-    matches=re.findall(r'(?m)^\s*(?:require\s+)?github\.com/boulingua/kit\s+([^\s]+)',(repo/'go.mod').read_text())
-    if matches!=['v'+pins['kit']['version']]:raise ValueError('go.mod must pin exactly the declared kit version')
+    matches=re.findall(r'(?m)^\s*(?:require\s+)?(github\.com/boulingua/kit(?:/v[0-9]+)?)\s+([^\s]+)',(repo/'go.mod').read_text())
+    if matches!=[(kit_module_path(pins['kit']['version']),'v'+pins['kit']['version'])]:raise ValueError('go.mod must pin exactly the declared kit version and major module path')
     caller=yaml.load((repo/'.github/workflows/deploy.yml').read_text(),Loader=yaml.BaseLoader)
     job=caller.get('jobs',{}).get('course',{})
     org=pins['org']['commit']
