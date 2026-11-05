@@ -240,7 +240,7 @@ def main() -> int:
             # being a day late. Two is drift.
             gomod = repo / "go.mod"
             if gomod.exists() and latest:
-                m = re.search(r"boulingua/kit v(\d+)\.(\d+)\.(\d+)",
+                m = re.search(r"boulingua/kit(?:/v[0-9]+)? v(\d+)\.(\d+)\.(\d+)",
                               gomod.read_text(encoding="utf-8"))
                 if m:
                     have = tuple(int(x) for x in m.groups())

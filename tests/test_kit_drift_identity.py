@@ -55,6 +55,15 @@ class CheckoutIdentity(unittest.TestCase):
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
         return result.stdout + result.stderr
 
+    def test_major_module_versions_participate_in_drift_check(self):
+        self.consumer('efl','course')
+        self.put(self.repo,'go.mod','module github.com/boulingua/efl\nrequire github.com/boulingua/kit/v2 v2.0.0\n')
+        p=self.repo/'hugo.toml';p.write_text(p.read_text().replace('boulingua/kit','boulingua/kit/v2'))
+        subprocess.run(['git','init','-q',str(self.kit)],check=True)
+        oid=subprocess.check_output(['git','-C',str(self.kit),'hash-object','-w','--stdin'],input='fixture',text=True).strip()
+        subprocess.run(['git','-C',str(self.kit),'tag','v3.0.0',oid],check=True)
+        self.assertIn('current major of v3',self.check(1))
+
     def test_renamed_catalogue_additions_pass_but_shared_key_replacement_fails(self):
         self.consumer('ressources', 'catalogue')
         for lang in ['de', 'en', 'fr']:
